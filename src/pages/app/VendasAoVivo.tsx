@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/layout/Layout";
 import { useMPPayments } from "@/hooks/useMPPayments";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useRealtimePayments } from "@/hooks/useRealtimePayments";
 import { FaturamentoHeader } from "@/components/vendas/FaturamentoHeader";
 import { PeriodFilter } from "@/components/vendas/PeriodFilter";
 import { KPICards } from "@/components/vendas/KPICards";
