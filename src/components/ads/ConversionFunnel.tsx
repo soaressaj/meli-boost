@@ -79,8 +79,8 @@ export function ConversionFunnel({ enabled }: ConversionFunnelProps) {
 
   const { total_visits = 0, purchase_intent = 0, purchase_intent_amount = 0, completed_sales = 0, completed_sales_amount = 0, conversion_rate = 0 } = data ?? {};
 
-  const visitToIntent = total_visits > 0 ? ((purchase_intent / total_visits) * 100).toFixed(1) : "0";
-  const intentToSale = purchase_intent > 0 ? ((completed_sales / purchase_intent) * 100).toFixed(1) : "0";
+  const visitToIntent = total_visits > 0 ? ((purchase_intent / total_visits) * 100) : 0;
+  const intentToSale = purchase_intent > 0 ? ((completed_sales / purchase_intent) * 100) : 0;
 
   return (
     <Card className="p-6">
