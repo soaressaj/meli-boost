@@ -28,7 +28,7 @@ export default function Callback() {
       setStatus("Trocando código por token...");
 
       const { data, error } = await supabase.functions.invoke("exchange-token", {
-        body: { code, user_id: user.id },
+        body: { code },
       });
 
       if (error || !data?.success) {
