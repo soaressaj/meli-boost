@@ -47,6 +47,69 @@ export type Database = {
         }
         Relationships: []
       }
+      mp_payments: {
+        Row: {
+          created_at: string | null
+          currency_id: string | null
+          date_approved: string | null
+          date_created: string | null
+          description: string | null
+          fee_amount: number | null
+          id: string
+          mp_payment_id: number
+          net_received_amount: number | null
+          operation_type: string | null
+          order_id: number | null
+          payer_email: string | null
+          raw_data: Json | null
+          status: string
+          status_detail: string | null
+          transaction_amount: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          currency_id?: string | null
+          date_approved?: string | null
+          date_created?: string | null
+          description?: string | null
+          fee_amount?: number | null
+          id?: string
+          mp_payment_id: number
+          net_received_amount?: number | null
+          operation_type?: string | null
+          order_id?: number | null
+          payer_email?: string | null
+          raw_data?: Json | null
+          status: string
+          status_detail?: string | null
+          transaction_amount?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          currency_id?: string | null
+          date_approved?: string | null
+          date_created?: string | null
+          description?: string | null
+          fee_amount?: number | null
+          id?: string
+          mp_payment_id?: number
+          net_received_amount?: number | null
+          operation_type?: string | null
+          order_id?: number | null
+          payer_email?: string | null
+          raw_data?: Json | null
+          status?: string
+          status_detail?: string | null
+          transaction_amount?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           ads_ignorado: boolean | null
