@@ -16,7 +16,7 @@ export const mpApi = {
 
     if (minutesUntilExpiry < 30) {
       const { data: refreshData, error } = await supabase.functions.invoke('refresh-token', {
-        body: { user_id: userId },
+        body: {},
       });
       if (error || !refreshData?.access_token) return null;
       return refreshData.access_token;

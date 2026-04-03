@@ -11,24 +11,39 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { user_id } = await req.json();
-
-    if (!user_id) {
-      return new Response(JSON.stringify({ error: "Missing user_id" }), {
-        status: 400,
+    // Authenticate the caller via JWT
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
+        status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Use service role client for DB operations
+    const adminSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: connection, error: fetchError } = await supabase
+    const { data: connection, error: fetchError } = await adminSupabase
       .from("mp_connections")
       .select("refresh_token, mp_user_id")
-      .eq("user_id", user_id)
+      .eq("user_id", user.id)
       .single();
 
     if (fetchError || !connection) {
@@ -55,7 +70,7 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      return new Response(JSON.stringify({ error: tokenData.message || "Refresh failed" }), {
+      return new Response(JSON.stringify({ error: "Token refresh failed" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -63,11 +78,11 @@ Deno.serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-    await supabase.from("mp_connections").update({
+    await adminSupabase.from("mp_connections").update({
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
       expires_at: expiresAt,
-    }).eq("user_id", user_id);
+    }).eq("user_id", user.id);
 
     return new Response(JSON.stringify({
       access_token: tokenData.access_token,
@@ -76,7 +91,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error("Refresh token error:", (err as Error).message);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
