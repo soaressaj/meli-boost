@@ -11,10 +11,33 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { code, user_id } = await req.json();
+    // Authenticate the caller via JWT
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (!code || !user_id) {
-      return new Response(JSON.stringify({ error: "Missing code or user_id" }), {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { code } = await req.json();
+
+    if (!code) {
+      return new Response(JSON.stringify({ error: "Missing code" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -39,7 +62,7 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      return new Response(JSON.stringify({ error: tokenData.message || "Token exchange failed" }), {
+      return new Response(JSON.stringify({ error: "Token exchange failed" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -51,15 +74,16 @@ Deno.serve(async (req) => {
     });
     const userData = await userResponse.json();
 
-    const supabase = createClient(
+    // Use service role client for DB operations
+    const adminSupabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
     const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-    const { error: dbError } = await supabase.from("mp_connections").upsert({
-      user_id,
+    const { error: dbError } = await adminSupabase.from("mp_connections").upsert({
+      user_id: user.id,
       mp_user_id: tokenData.user_id,
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
@@ -68,7 +92,8 @@ Deno.serve(async (req) => {
     }, { onConflict: "user_id" });
 
     if (dbError) {
-      return new Response(JSON.stringify({ error: "Database error: " + dbError.message }), {
+      console.error("Database error:", dbError.message);
+      return new Response(JSON.stringify({ error: "Failed to save connection" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -78,7 +103,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error("Exchange token error:", (err as Error).message);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
