@@ -168,7 +168,7 @@ export function ConversionFunnel({ enabled }: ConversionFunnelProps) {
 
               <rect x="570" y="8" width="60" height="22" rx="4" fill="hsl(var(--primary))" opacity="0.1" />
               <text x="600" y="23" textAnchor="middle" fontSize="11" fontWeight="600" fill="hsl(var(--primary))">
-                {intentToSale}%
+                {Number.isInteger(intentToSale) ? intentToSale : intentToSale.toFixed(1)}%
               </text>
             </svg>
           </div>
