@@ -25,11 +25,20 @@ export default function Callback() {
         return;
       }
 
+      const codeVerifier = sessionStorage.getItem("mp_code_verifier");
+      if (!codeVerifier) {
+        toast.error("Code verifier não encontrado. Tente conectar novamente.");
+        navigate("/connect");
+        return;
+      }
+
       setStatus("Trocando código por token...");
 
       const { data, error } = await supabase.functions.invoke("exchange-token", {
-        body: { code },
+        body: { code, code_verifier: codeVerifier },
       });
+
+      sessionStorage.removeItem("mp_code_verifier");
 
       if (error || !data?.success) {
         toast.error(data?.error || "Erro ao conectar Mercado Livre");

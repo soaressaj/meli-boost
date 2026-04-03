@@ -11,7 +11,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate the caller via JWT
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization header" }), {
@@ -34,10 +33,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { code } = await req.json();
+    const { code, code_verifier } = await req.json();
 
     if (!code) {
       return new Response(JSON.stringify({ error: "Missing code" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!code_verifier) {
+      return new Response(JSON.stringify({ error: "Missing code_verifier" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -47,16 +53,19 @@ Deno.serve(async (req) => {
     const clientSecret = Deno.env.get("MP_CLIENT_SECRET");
     const redirectUri = Deno.env.get("MP_REDIRECT_URI");
 
+    const bodyParams: Record<string, string> = {
+      grant_type: "authorization_code",
+      client_id: clientId!,
+      client_secret: clientSecret!,
+      code,
+      redirect_uri: redirectUri!,
+      code_verifier,
+    };
+
     const tokenResponse = await fetch("https://api.mercadolibre.com/oauth/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: clientId!,
-        client_secret: clientSecret!,
-        code,
-        redirect_uri: redirectUri!,
-      }),
+      body: new URLSearchParams(bodyParams),
     });
 
     const tokenData = await tokenResponse.json();
