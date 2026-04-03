@@ -1,5 +1,7 @@
 import { useAuth } from "@/components/layout/Layout";
 import { useMLAdsReport } from "@/hooks/useMLAdsReport";
+import { useMLVisitsReport } from "@/hooks/useMLVisitsReport";
+import { ConversionFunnel } from "@/components/ads/ConversionFunnel";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Megaphone, TrendingUp, MousePointerClick, Eye } from "lucide-react";
@@ -59,6 +61,12 @@ export default function Marketplaces() {
   const { data: monthlyRaw, isLoading: monthlyLoading } = useMLAdsReport(
     last3Months.from,
     last3Months.to,
+    !!user
+  );
+
+  const { data: visitsData, isLoading: visitsLoading } = useMLVisitsReport(
+    currentMonth.from,
+    currentMonth.to,
     !!user
   );
 
@@ -126,6 +134,8 @@ export default function Marketplaces() {
           isLoading={isLoading}
         />
       </div>
+      {/* Conversion Funnel */}
+      <ConversionFunnel data={visitsData} isLoading={visitsLoading} />
 
       {/* Daily chart */}
       <Card className="p-6">
