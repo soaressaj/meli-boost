@@ -134,6 +134,8 @@ export default function Marketplaces() {
           isLoading={isLoading}
         />
       </div>
+      {/* Conversion Funnel */}
+      <ConversionFunnel data={visitsData} isLoading={visitsLoading} />
 
       {/* Daily chart */}
       <Card className="p-6">
