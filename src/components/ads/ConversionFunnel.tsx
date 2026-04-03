@@ -163,7 +163,7 @@ export function ConversionFunnel({ enabled }: ConversionFunnelProps) {
               {/* Conversion rate labels */}
               <rect x="270" y="8" width="60" height="22" rx="4" fill="hsl(var(--primary))" opacity="0.1" />
               <text x="300" y="23" textAnchor="middle" fontSize="11" fontWeight="600" fill="hsl(var(--primary))">
-                {visitToIntent}%
+                {Number.isInteger(visitToIntent) ? visitToIntent : visitToIntent.toFixed(1)}%
               </text>
 
               <rect x="570" y="8" width="60" height="22" rx="4" fill="hsl(var(--primary))" opacity="0.1" />
