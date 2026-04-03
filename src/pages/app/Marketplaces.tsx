@@ -28,9 +28,9 @@ function getMonthRange() {
   };
 }
 
-function getLast6MonthsRange() {
+function getLast3MonthsRange() {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return {
     from: start.toISOString().split("T")[0],
