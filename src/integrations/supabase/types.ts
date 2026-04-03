@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      mp_connections: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          mp_user_id: number
+          nickname: string | null
+          refresh_token: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          mp_user_id: number
+          nickname?: string | null
+          refresh_token: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          mp_user_id?: number
+          nickname?: string | null
+          refresh_token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          ads_ignorado: boolean | null
+          aliquota_imposto: number | null
+          antecipacao_ativa: boolean | null
+          custo_fixo_mensal: number | null
+          custo_frete_por_pedido: number | null
+          custo_produto_percentual: number | null
+          investimento_ads_periodo: number | null
+          regime_tributario: string | null
+          taxa_antecipacao: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ads_ignorado?: boolean | null
+          aliquota_imposto?: number | null
+          antecipacao_ativa?: boolean | null
+          custo_fixo_mensal?: number | null
+          custo_frete_por_pedido?: number | null
+          custo_produto_percentual?: number | null
+          investimento_ads_periodo?: number | null
+          regime_tributario?: string | null
+          taxa_antecipacao?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ads_ignorado?: boolean | null
+          aliquota_imposto?: number | null
+          antecipacao_ativa?: boolean | null
+          custo_fixo_mensal?: number | null
+          custo_frete_por_pedido?: number | null
+          custo_produto_percentual?: number | null
+          investimento_ads_periodo?: number | null
+          regime_tributario?: string | null
+          taxa_antecipacao?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
