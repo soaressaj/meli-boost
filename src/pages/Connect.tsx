@@ -1,8 +1,8 @@
 import { Zap, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const ML_CLIENT_ID = import.meta.env.VITE_MP_CLIENT_ID || "";
-const ML_REDIRECT_URI = import.meta.env.VITE_MP_REDIRECT_URI || "";
+const ML_CLIENT_ID = import.meta.env.VITE_MP_CLIENT_ID || "1602108563442105";
+const ML_REDIRECT_URI = import.meta.env.VITE_MP_REDIRECT_URI || `${window.location.origin}/callback`;
 
 export default function Connect() {
   const handleConnect = () => {
