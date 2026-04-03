@@ -47,7 +47,7 @@ export default function Marketplaces() {
   const { user } = useAuth();
 
   const currentMonth = getMonthRange();
-  const last6Months = getLast6MonthsRange();
+  const last3Months = getLast3MonthsRange();
 
   const { data: dailyData, isLoading: dailyLoading } = useMLAdsReport(
     currentMonth.from,
