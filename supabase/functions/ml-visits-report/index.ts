@@ -93,10 +93,10 @@ Deno.serve(async (req) => {
 
     const mlUserId = connection.mp_user_id;
 
-    // Visits API needs URL-encoded ISO dates
-    const vFrom = encodeURIComponent(`${date_from}T00:00:00.000-00:00`);
-    const vTo = encodeURIComponent(`${date_to}T23:59:59.000-00:00`);
-    const visitsUrl = `https://api.mercadolibre.com/users/${mlUserId}/items_visits?date_from=${vFrom}&date_to=${vTo}`;
+    // Visits API - use the exact format from ML docs without URL encoding
+    const visitsUrl = new URL(`https://api.mercadolibre.com/users/${mlUserId}/items_visits`);
+    visitsUrl.searchParams.set("date_from", `${date_from}T00:00:00.000-00:00`);
+    visitsUrl.searchParams.set("date_to", `${date_to}T23:59:59.000-00:00`);
     const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${date_from}T00:00:00.000-0300&order.date_created.to=${date_to}T23:59:59.999-0300&sort=date_desc`;
 
     console.log("Fetching visits:", visitsUrl);
