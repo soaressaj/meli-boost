@@ -14,7 +14,7 @@ const ML_REDIRECT_URI = import.meta.env.VITE_MP_REDIRECT_URI || `${window.locati
 
 export default function Conta() {
   const { user, nickname } = useAuth();
-  const { data: connection } = useMPConnection(user?.id);
+  const { data: connection } = useMPConnection(user?.id) as { data: { nickname: string | null; mp_user_id: number; expires_at: string } | null | undefined };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
