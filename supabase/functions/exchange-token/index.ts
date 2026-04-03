@@ -62,7 +62,10 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      return new Response(JSON.stringify({ error: "Token exchange failed" }), {
+      console.error("ML token exchange failed:", JSON.stringify(tokenData));
+      console.error("Used redirect_uri:", redirectUri);
+      console.error("Used client_id:", clientId);
+      return new Response(JSON.stringify({ error: "Token exchange failed", details: tokenData }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
