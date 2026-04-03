@@ -130,7 +130,7 @@ export default function Marketplaces() {
         />
       </div>
       {/* Conversion Funnel */}
-      <ConversionFunnel data={visitsData} isLoading={visitsLoading} />
+      <ConversionFunnel enabled={!!user} />
 
       {/* Daily chart */}
       <Card className="p-6">
