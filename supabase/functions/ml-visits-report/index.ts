@@ -97,19 +97,26 @@ Deno.serve(async (req) => {
     const visitsUrl = `https://api.mercadolibre.com/users/${mlUserId}/items_visits/time_window?last=30&unit=day`;
     const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${date_from}T00:00:00.000-0300&order.date_created.to=${date_to}T23:59:59.999-0300&sort=date_desc`;
 
-    console.log("Fetching visits:", visitsUrl.toString());
+    console.log("Fetching visits:", visitsUrl);
     console.log("Fetching orders:", ordersUrl);
 
     const [visitsRes, ordersRes] = await Promise.all([
-      fetch(visitsUrl.toString(), { headers: mlHeaders }),
+      fetch(visitsUrl, { headers: mlHeaders }),
       fetch(ordersUrl, { headers: mlHeaders }),
     ]);
 
     let totalVisits = 0;
     if (visitsRes.ok) {
       const visitsData = await visitsRes.json();
-      console.log("Visits response:", JSON.stringify(visitsData));
+      console.log("Visits response:", JSON.stringify(visitsData).slice(0, 500));
+      // time_window returns { total_visits, ... } or per-item with results array
       totalVisits = visitsData?.total_visits ?? 0;
+      // If time_window returns results array, sum all visits
+      if (totalVisits === 0 && Array.isArray(visitsData?.results)) {
+        for (const item of visitsData.results) {
+          totalVisits += item.total_visits ?? 0;
+        }
+      }
     } else {
       const visitsError = await visitsRes.text();
       console.error("Visits API error:", visitsRes.status, visitsError);
