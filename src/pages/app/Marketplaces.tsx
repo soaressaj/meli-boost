@@ -64,11 +64,6 @@ export default function Marketplaces() {
     !!user
   );
 
-  const { data: visitsData, isLoading: visitsLoading } = useMLVisitsReport(
-    currentMonth.from,
-    currentMonth.to,
-    !!user
-  );
 
   const today = new Date().toISOString().split("T")[0];
   const todaySpend = dailyData?.find((d) => d.date === today)?.cost ?? 0;
