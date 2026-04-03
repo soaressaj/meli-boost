@@ -33,7 +33,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get access token via refresh-token logic
     const adminSupabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -87,49 +86,59 @@ Deno.serve(async (req) => {
     }
 
     const { date_from, date_to } = await req.json();
-    const advertiserId = connection.mp_user_id;
 
-    // Fetch product ads report from ML API
-    const reportUrl = `https://api.mercadolibre.com/advertising/advertisers/${advertiserId}/product-ads/report?date_from=${date_from}&date_to=${date_to}&granularity=day`;
+    const mlHeaders = {
+      Authorization: `Bearer ${accessToken}`,
+      "api-version": "2",
+      "Content-Type": "application/json",
+    };
 
-    console.log("Fetching ML ads report:", reportUrl);
+    // Step 1: Get the advertiser_id for PADS
+    const advUrl = `https://api.mercadolibre.com/advertising/advertisers?product_id=PADS`;
+    console.log("Fetching advertisers:", advUrl);
 
-    const reportResponse = await fetch(reportUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const advResponse = await fetch(advUrl, { headers: mlHeaders });
 
-    if (!reportResponse.ok) {
-      const errorText = await reportResponse.text();
-      console.error("ML Ads API error:", reportResponse.status, errorText);
-      
-      // Try alternative endpoint - campaigns list with metrics
-      const campaignsUrl = `https://api.mercadolibre.com/advertising/advertisers/${advertiserId}/product-ads/campaigns?status=active`;
-      const campaignsResponse = await fetch(campaignsUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      
-      if (!campaignsResponse.ok) {
-        const campError = await campaignsResponse.text();
-        console.error("ML Campaigns API error:", campaignsResponse.status, campError);
-        return new Response(JSON.stringify({ 
-          error: "Failed to fetch ads data", 
-          details: errorText,
-          campaigns_error: campError,
-          status: reportResponse.status 
-        }), {
-          status: reportResponse.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const campaignsData = await campaignsResponse.json();
-      return new Response(JSON.stringify({ type: "campaigns", data: campaignsData }), {
+    if (!advResponse.ok) {
+      const advError = await advResponse.text();
+      console.error("Advertisers API error:", advResponse.status, advError);
+      return new Response(JSON.stringify({ error: "Failed to fetch advertiser", details: advError }), {
+        status: advResponse.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const reportData = await reportResponse.json();
-    return new Response(JSON.stringify({ type: "report", data: reportData }), {
+    const advData = await advResponse.json();
+    console.log("Advertisers response:", JSON.stringify(advData));
+
+    const advertiserId = advData?.advertisers?.[0]?.advertiser_id;
+    if (!advertiserId) {
+      return new Response(JSON.stringify({ error: "No advertiser found", data: advData }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Step 2: Fetch daily campaign metrics with aggregation_type=DAILY
+    const metricsUrl = `https://api.mercadolibre.com/advertising/advertisers/${advertiserId}/product_ads/campaigns?date_from=${date_from}&date_to=${date_to}&metrics=clicks,prints,cost,cpc,acos,roas,total_amount&aggregation_type=DAILY&limit=100&offset=0`;
+
+    console.log("Fetching daily metrics:", metricsUrl);
+
+    const metricsResponse = await fetch(metricsUrl, { headers: mlHeaders });
+
+    if (!metricsResponse.ok) {
+      const metricsError = await metricsResponse.text();
+      console.error("Metrics API error:", metricsResponse.status, metricsError);
+      return new Response(JSON.stringify({ error: "Failed to fetch metrics", details: metricsError }), {
+        status: metricsResponse.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const metricsData = await metricsResponse.json();
+    console.log("Metrics response paging:", JSON.stringify(metricsData?.paging));
+
+    return new Response(JSON.stringify({ type: "daily_metrics", data: metricsData }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
