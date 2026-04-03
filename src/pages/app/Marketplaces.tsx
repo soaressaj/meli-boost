@@ -56,8 +56,8 @@ export default function Marketplaces() {
   );
 
   const { data: monthlyRaw, isLoading: monthlyLoading } = useMLAdsReport(
-    last6Months.from,
-    last6Months.to,
+    last3Months.from,
+    last3Months.to,
     !!user
   );
 
