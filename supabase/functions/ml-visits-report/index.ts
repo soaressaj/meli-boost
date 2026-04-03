@@ -110,13 +110,20 @@ Deno.serve(async (req) => {
     if (visitsRes.ok) {
       const visitsData = await visitsRes.json();
       console.log("Visits response:", JSON.stringify(visitsData).slice(0, 500));
-      // time_window returns { total_visits, ... } or per-item with results array
-      totalVisits = visitsData?.total_visits ?? 0;
-      // If time_window returns results array, sum all visits
-      if (totalVisits === 0 && Array.isArray(visitsData?.results)) {
+
+      // Filter results to only include dates within the requested range
+      if (Array.isArray(visitsData?.results)) {
         for (const item of visitsData.results) {
-          totalVisits += item.total_visits ?? 0;
+          const itemDate = item.date?.split("T")[0];
+          if (itemDate && itemDate >= date_from && itemDate <= date_to) {
+            totalVisits += item.total ?? 0;
+          }
         }
+      }
+
+      // Fallback to total_visits if no results array
+      if (totalVisits === 0 && !visitsData?.results) {
+        totalVisits = visitsData?.total_visits ?? 0;
       }
     } else {
       const visitsError = await visitsRes.text();

@@ -79,8 +79,8 @@ export function ConversionFunnel({ enabled }: ConversionFunnelProps) {
 
   const { total_visits = 0, purchase_intent = 0, purchase_intent_amount = 0, completed_sales = 0, completed_sales_amount = 0, conversion_rate = 0 } = data ?? {};
 
-  const visitToIntent = total_visits > 0 ? ((purchase_intent / total_visits) * 100).toFixed(1) : "0";
-  const intentToSale = purchase_intent > 0 ? ((completed_sales / purchase_intent) * 100).toFixed(1) : "0";
+  const visitToIntent = total_visits > 0 ? ((purchase_intent / total_visits) * 100) : 0;
+  const intentToSale = purchase_intent > 0 ? ((completed_sales / purchase_intent) * 100) : 0;
 
   return (
     <Card className="p-6">
@@ -89,7 +89,7 @@ export function ConversionFunnel({ enabled }: ConversionFunnelProps) {
           <h2 className="text-lg font-semibold text-foreground">Conversão de visitas</h2>
           {hasData && (
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-foreground">{conversion_rate.toFixed(1)}%</span>
+              <span className="text-2xl font-bold text-foreground">{Number.isInteger(conversion_rate) ? conversion_rate : conversion_rate.toFixed(1)}%</span>
               <span className="text-sm text-muted-foreground">Conversão total</span>
             </div>
           )}
@@ -163,12 +163,12 @@ export function ConversionFunnel({ enabled }: ConversionFunnelProps) {
               {/* Conversion rate labels */}
               <rect x="270" y="8" width="60" height="22" rx="4" fill="hsl(var(--primary))" opacity="0.1" />
               <text x="300" y="23" textAnchor="middle" fontSize="11" fontWeight="600" fill="hsl(var(--primary))">
-                {visitToIntent}%
+                {Number.isInteger(visitToIntent) ? visitToIntent : visitToIntent.toFixed(1)}%
               </text>
 
               <rect x="570" y="8" width="60" height="22" rx="4" fill="hsl(var(--primary))" opacity="0.1" />
               <text x="600" y="23" textAnchor="middle" fontSize="11" fontWeight="600" fill="hsl(var(--primary))">
-                {intentToSale}%
+                {Number.isInteger(intentToSale) ? intentToSale : intentToSale.toFixed(1)}%
               </text>
             </svg>
           </div>
