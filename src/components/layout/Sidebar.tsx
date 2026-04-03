@@ -27,7 +27,7 @@ import { toast } from "sonner";
 
 const navItems = [
   { title: "Vendas ao Vivo", url: "/app/vendas", icon: BarChart3 },
-  { title: "Marketplaces", url: "/app/marketplaces", icon: ShoppingCart },
+  { title: "ADS", url: "/app/marketplaces", icon: ShoppingCart },
   { title: "Custos & Impostos", url: "/app/custos", icon: DollarSign },
   { title: "Calculadoras", url: "/app/calculadoras", icon: Calculator },
   { title: "DRE", url: "/app/dre", icon: TrendingUp },
