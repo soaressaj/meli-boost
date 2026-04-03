@@ -1,6 +1,6 @@
 import { useAuth } from "@/components/layout/Layout";
 import { useMLAdsReport } from "@/hooks/useMLAdsReport";
-import { useMLVisitsReport } from "@/hooks/useMLVisitsReport";
+
 import { ConversionFunnel } from "@/components/ads/ConversionFunnel";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,11 +64,6 @@ export default function Marketplaces() {
     !!user
   );
 
-  const { data: visitsData, isLoading: visitsLoading } = useMLVisitsReport(
-    currentMonth.from,
-    currentMonth.to,
-    !!user
-  );
 
   const today = new Date().toISOString().split("T")[0];
   const todaySpend = dailyData?.find((d) => d.date === today)?.cost ?? 0;
@@ -135,7 +130,7 @@ export default function Marketplaces() {
         />
       </div>
       {/* Conversion Funnel */}
-      <ConversionFunnel data={visitsData} isLoading={visitsLoading} />
+      <ConversionFunnel enabled={!!user} />
 
       {/* Daily chart */}
       <Card className="p-6">

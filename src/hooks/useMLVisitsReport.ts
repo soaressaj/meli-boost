@@ -10,12 +10,12 @@ export interface VisitsFunnel {
   conversion_rate: number;
 }
 
-export function useMLVisitsReport(dateFrom: string, dateTo: string, enabled: boolean) {
+export function useMLVisitsReport(dateFrom: string, dateTo: string, lastDays: number, enabled: boolean) {
   return useQuery({
-    queryKey: ["ml-visits-report", dateFrom, dateTo],
+    queryKey: ["ml-visits-report", dateFrom, dateTo, lastDays],
     queryFn: async (): Promise<VisitsFunnel> => {
       const { data, error } = await supabase.functions.invoke("ml-visits-report", {
-        body: { date_from: dateFrom, date_to: dateTo },
+        body: { date_from: dateFrom, date_to: dateTo, last_days: lastDays },
       });
 
       if (error) throw new Error("Erro ao buscar dados de visitas");

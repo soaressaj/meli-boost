@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { date_from, date_to } = await req.json();
+    const { date_from, date_to, last_days } = await req.json();
 
     const mlHeaders = {
       Authorization: `Bearer ${accessToken}`,
@@ -93,8 +93,9 @@ Deno.serve(async (req) => {
 
     const mlUserId = connection.mp_user_id;
 
-    // Visits API - try time_window endpoint instead
-    const visitsUrl = `https://api.mercadolibre.com/users/${mlUserId}/items_visits/time_window?last=30&unit=day`;
+    // Visits API uses time_window with last N days
+    const days = last_days ?? 30;
+    const visitsUrl = `https://api.mercadolibre.com/users/${mlUserId}/items_visits/time_window?last=${days}&unit=day`;
     const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${date_from}T00:00:00.000-0300&order.date_created.to=${date_to}T23:59:59.999-0300&sort=date_desc`;
 
     console.log("Fetching visits:", visitsUrl);
