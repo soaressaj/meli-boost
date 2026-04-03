@@ -21,7 +21,7 @@ export default function VendasAoVivo() {
   const { settings, saveSettings } = useUserSettings(user?.id);
 
   // Realtime: plays sound on new sale and auto-refetches data
-  useRealtimePayments(userId);
+  useRealtimePayments(user?.id);
 
   const totalBruto = payments
     .filter((p) => p.status === "approved")
