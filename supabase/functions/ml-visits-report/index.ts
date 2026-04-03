@@ -94,8 +94,8 @@ Deno.serve(async (req) => {
     const mlUserId = connection.mp_user_id;
 
     // Fetch visits, orders, and completed orders in parallel
-    const visitsUrl = `https://api.mercadolibre.com/users/${mlUserId}/items_visits?date_from=${date_from}T00:00:00.000-03:00&date_to=${date_to}T23:59:59.999-03:00`;
-    const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${date_from}T00:00:00.000-03:00&order.date_created.to=${date_to}T23:59:59.999-03:00&sort=date_desc`;
+    const visitsUrl = `https://api.mercadolibre.com/users/${mlUserId}/items_visits?date_from=${date_from}T00:00:00.000-0300&date_to=${date_to}T23:59:59.999-0300`;
+    const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${date_from}T00:00:00.000-0300&order.date_created.to=${date_to}T23:59:59.999-0300&sort=date_desc`;
 
     console.log("Fetching visits:", visitsUrl);
     console.log("Fetching orders:", ordersUrl);
