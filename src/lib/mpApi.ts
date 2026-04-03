@@ -2,26 +2,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const mpApi = {
   async getAccessToken(userId: string): Promise<string | null> {
-    const { data } = await supabase
-      .from('mp_connections')
-      .select('access_token, expires_at, refresh_token')
-      .eq('user_id', userId)
-      .single();
-
-    if (!data) return null;
-
-    const expiresAt = new Date(data.expires_at);
-    const now = new Date();
-    const minutesUntilExpiry = (expiresAt.getTime() - now.getTime()) / 60000;
-
-    if (minutesUntilExpiry < 30) {
-      const { data: refreshData, error } = await supabase.functions.invoke('refresh-token', {
-        body: {},
-      });
-      if (error || !refreshData?.access_token) return null;
-      return refreshData.access_token;
-    }
-
+    // Always get tokens server-side via edge function to avoid exposing them to the client
+    const { data, error } = await supabase.functions.invoke('refresh-token', {
+      body: {},
+    });
+    if (error || !data?.access_token) return null;
     return data.access_token;
   },
 
