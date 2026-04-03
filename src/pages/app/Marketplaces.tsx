@@ -1,5 +1,7 @@
 import { useAuth } from "@/components/layout/Layout";
 import { useMLAdsReport } from "@/hooks/useMLAdsReport";
+import { useMLVisitsReport } from "@/hooks/useMLVisitsReport";
+import { ConversionFunnel } from "@/components/ads/ConversionFunnel";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Megaphone, TrendingUp, MousePointerClick, Eye } from "lucide-react";
