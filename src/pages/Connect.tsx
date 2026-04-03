@@ -4,9 +4,31 @@ import { Button } from "@/components/ui/button";
 const ML_CLIENT_ID = import.meta.env.VITE_MP_CLIENT_ID || "2782263727604284";
 const ML_REDIRECT_URI = import.meta.env.VITE_MP_REDIRECT_URI || `${window.location.origin}/callback`;
 
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
 export default function Connect() {
-  const handleConnect = () => {
-    const url = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`;
+  const handleConnect = async () => {
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+    // Store verifier for the callback to use
+    sessionStorage.setItem("mp_code_verifier", codeVerifier);
+
+    const url = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
     window.location.href = url;
   };
 
