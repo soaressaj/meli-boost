@@ -89,7 +89,7 @@ export function ConversionFunnel({ enabled }: ConversionFunnelProps) {
           <h2 className="text-lg font-semibold text-foreground">Conversão de visitas</h2>
           {hasData && (
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-foreground">{conversion_rate.toFixed(1)}%</span>
+              <span className="text-2xl font-bold text-foreground">{Number.isInteger(conversion_rate) ? conversion_rate : conversion_rate.toFixed(1)}%</span>
               <span className="text-sm text-muted-foreground">Conversão total</span>
             </div>
           )}
