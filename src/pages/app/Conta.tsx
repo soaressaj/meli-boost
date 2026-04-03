@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 
-const ML_CLIENT_ID = import.meta.env.VITE_MP_CLIENT_ID || "1602108563442105";
+const ML_CLIENT_ID = import.meta.env.VITE_MP_CLIENT_ID || "2782263727604284";
 const ML_REDIRECT_URI = import.meta.env.VITE_MP_REDIRECT_URI || `${window.location.origin}/callback`;
 
 export default function Conta() {
