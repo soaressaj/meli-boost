@@ -99,11 +99,11 @@ Deno.serve(async (req) => {
     visitsUrl.searchParams.set("date_to", `${date_to}T23:59:59.000-00:00`);
     const ordersUrl = `https://api.mercadolibre.com/orders/search?seller=${mlUserId}&order.date_created.from=${date_from}T00:00:00.000-0300&order.date_created.to=${date_to}T23:59:59.999-0300&sort=date_desc`;
 
-    console.log("Fetching visits:", visitsUrl);
+    console.log("Fetching visits:", visitsUrl.toString());
     console.log("Fetching orders:", ordersUrl);
 
     const [visitsRes, ordersRes] = await Promise.all([
-      fetch(visitsUrl, { headers: mlHeaders }),
+      fetch(visitsUrl.toString(), { headers: mlHeaders }),
       fetch(ordersUrl, { headers: mlHeaders }),
     ]);
 
