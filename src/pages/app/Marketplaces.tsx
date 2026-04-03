@@ -28,9 +28,9 @@ function getMonthRange() {
   };
 }
 
-function getLast6MonthsRange() {
+function getLast3MonthsRange() {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return {
     from: start.toISOString().split("T")[0],
@@ -47,7 +47,7 @@ export default function Marketplaces() {
   const { user } = useAuth();
 
   const currentMonth = getMonthRange();
-  const last6Months = getLast6MonthsRange();
+  const last3Months = getLast3MonthsRange();
 
   const { data: dailyData, isLoading: dailyLoading } = useMLAdsReport(
     currentMonth.from,
@@ -56,8 +56,8 @@ export default function Marketplaces() {
   );
 
   const { data: monthlyRaw, isLoading: monthlyLoading } = useMLAdsReport(
-    last6Months.from,
-    last6Months.to,
+    last3Months.from,
+    last3Months.to,
     !!user
   );
 
@@ -165,7 +165,7 @@ export default function Marketplaces() {
       {/* Monthly chart */}
       <Card className="p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Gasto mensal com ADS — Últimos 6 meses
+          Gasto mensal com ADS — Últimos 3 meses
         </h2>
         {monthlyLoading ? (
           <Skeleton className="h-64 w-full" />

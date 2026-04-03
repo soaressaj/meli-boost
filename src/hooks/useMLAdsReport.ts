@@ -20,22 +20,24 @@ export function useMLAdsReport(dateFrom: string, dateTo: string, enabled: boolea
 
       console.log("ML Ads response:", data);
 
-      // Handle the report response - adapt to actual ML API structure
-      if (data?.type === "report" && data?.data) {
-        const results = data.data.results || data.data;
+      // Handle daily_metrics response from the corrected API
+      if (data?.type === "daily_metrics" && data?.data?.results) {
+        const results = data.data.results;
         if (Array.isArray(results)) {
-          return results.map((item: any) => ({
-            date: item.date || item.date_from || "",
-            cost: Number(item.cost || item.total_amount || item.spend || 0),
-            clicks: Number(item.clicks || 0),
-            prints: Number(item.prints || item.impressions || 0),
-          }));
+          // Aggregate by date since multiple campaigns may have same date
+          const byDate: Record<string, AdsReportDay> = {};
+          for (const item of results) {
+            const date = item.date || "";
+            if (!date) continue;
+            if (!byDate[date]) {
+              byDate[date] = { date, cost: 0, clicks: 0, prints: 0 };
+            }
+            byDate[date].cost += Number(item.cost || 0);
+            byDate[date].clicks += Number(item.clicks || 0);
+            byDate[date].prints += Number(item.prints || 0);
+          }
+          return Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
         }
-      }
-
-      // If we get campaigns data instead, try to extract cost info
-      if (data?.type === "campaigns" && data?.data) {
-        console.log("Got campaigns data instead of report:", data.data);
       }
 
       return [];
