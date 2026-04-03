@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/components/layout/Layout";
 import { useMPPayments } from "@/hooks/useMPPayments";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useRealtimePayments } from "@/hooks/useRealtimePayments";
 import { FaturamentoHeader } from "@/components/vendas/FaturamentoHeader";
 import { PeriodFilter } from "@/components/vendas/PeriodFilter";
 import { KPICards } from "@/components/vendas/KPICards";
@@ -16,8 +17,11 @@ export default function VendasAoVivo() {
     end: new Date(),
   });
 
-  const { data: payments = [], isLoading } = useMPPayments(dateRange, user?.id);
+  const { data: payments = [], isLoading, refetch } = useMPPayments(dateRange, user?.id);
   const { settings, saveSettings } = useUserSettings(user?.id);
+
+  // Realtime: plays sound on new sale and auto-refetches data
+  useRealtimePayments(user?.id);
 
   const totalBruto = payments
     .filter((p) => p.status === "approved")
