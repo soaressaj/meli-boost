@@ -11,7 +11,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate the caller via JWT
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization header" }), {
@@ -34,7 +33,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role client for DB operations
     const adminSupabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -42,7 +40,7 @@ Deno.serve(async (req) => {
 
     const { data: connection, error: fetchError } = await adminSupabase
       .from("mp_connections")
-      .select("refresh_token, mp_user_id")
+      .select("access_token, refresh_token, expires_at")
       .eq("user_id", user.id)
       .single();
 
@@ -53,6 +51,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // If token is still valid (more than 30 min), return it directly
+    const expiresAt = new Date(connection.expires_at);
+    const minutesUntilExpiry = (expiresAt.getTime() - Date.now()) / 60000;
+
+    if (minutesUntilExpiry > 30) {
+      return new Response(JSON.stringify({
+        access_token: connection.access_token,
+        expires_at: connection.expires_at,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Otherwise refresh the token
     const clientId = Deno.env.get("MP_CLIENT_ID");
     const clientSecret = Deno.env.get("MP_CLIENT_SECRET");
 
@@ -76,17 +88,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+    const newExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
     await adminSupabase.from("mp_connections").update({
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,
-      expires_at: expiresAt,
+      expires_at: newExpiresAt,
     }).eq("user_id", user.id);
 
     return new Response(JSON.stringify({
       access_token: tokenData.access_token,
-      expires_at: expiresAt,
+      expires_at: newExpiresAt,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

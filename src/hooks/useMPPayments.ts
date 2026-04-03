@@ -33,7 +33,7 @@ export function useMPConnection(userId: string | undefined) {
       if (!userId) return null;
       const { data, error } = await supabase
         .from('mp_connections')
-        .select('*')
+        .select('id, user_id, mp_user_id, nickname, expires_at, created_at')
         .eq('user_id', userId)
         .single();
       if (error) return null;
