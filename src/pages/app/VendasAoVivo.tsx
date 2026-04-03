@@ -17,8 +17,11 @@ export default function VendasAoVivo() {
     end: new Date(),
   });
 
-  const { data: payments = [], isLoading } = useMPPayments(dateRange, user?.id);
+  const { data: payments = [], isLoading, refetch } = useMPPayments(dateRange, user?.id);
   const { settings, saveSettings } = useUserSettings(user?.id);
+
+  // Realtime: plays sound on new sale and auto-refetches data
+  useRealtimePayments(userId);
 
   const totalBruto = payments
     .filter((p) => p.status === "approved")
