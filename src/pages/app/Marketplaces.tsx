@@ -195,7 +195,9 @@ export default function Marketplaces() {
                   color: "hsl(var(--foreground))",
                 }}
               />
-              <Bar dataKey="valor" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="valor" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]}>
+                <LabelList dataKey="valor" position="top" formatter={(v: number) => formatCurrency(v)} style={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
