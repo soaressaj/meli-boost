@@ -165,7 +165,7 @@ export default function Marketplaces() {
       {/* Monthly chart */}
       <Card className="p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Gasto mensal com ADS — Últimos 6 meses
+          Gasto mensal com ADS — Últimos 3 meses
         </h2>
         {monthlyLoading ? (
           <Skeleton className="h-64 w-full" />
