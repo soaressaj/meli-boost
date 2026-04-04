@@ -125,9 +125,9 @@ Deno.serve(async (req) => {
     const ordersToFetch = sampled ? uniqueOrders.slice(0, MAX_SHIPMENT_CALLS) : uniqueOrders;
     const totalOrderCount = ordersWithShipping.length;
 
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < uniqueOrders.length; i += BATCH_SIZE) {
-      const batch = uniqueOrders.slice(i, i + BATCH_SIZE);
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < ordersToFetch.length; i += BATCH_SIZE) {
+      const batch = ordersToFetch.slice(i, i + BATCH_SIZE);
       
       const results = await Promise.allSettled(
         batch.map(async (order: any) => {
@@ -165,8 +165,20 @@ Deno.serve(async (req) => {
       }
 
       // Rate limiting between batches
-      if (i + BATCH_SIZE < uniqueOrders.length) {
-        await new Promise((r) => setTimeout(r, 300));
+      if (i + BATCH_SIZE < ordersToFetch.length) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
+
+    // If sampled, extrapolate proportionally
+    if (sampled) {
+      const sampledTotal = Object.values(fulfillmentCounts).reduce((s, c) => s + c.count, 0);
+      if (sampledTotal > 0) {
+        const scale = totalOrderCount / sampledTotal;
+        for (const key of Object.keys(fulfillmentCounts)) {
+          fulfillmentCounts[key].count = Math.round(fulfillmentCounts[key].count * scale);
+          fulfillmentCounts[key].revenue = fulfillmentCounts[key].revenue * scale;
+        }
       }
     }
 
@@ -183,7 +195,7 @@ Deno.serve(async (req) => {
     // Sort by count desc
     centers.sort((a, b) => b.count - a.count);
 
-    const totalOrders = centers.reduce((sum, c) => sum + c.count, 0);
+    const totalOrders = sampled ? totalOrderCount : centers.reduce((sum, c) => sum + c.count, 0);
 
     return new Response(
       JSON.stringify({
