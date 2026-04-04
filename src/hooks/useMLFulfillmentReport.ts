@@ -21,16 +21,10 @@ export function useMLFulfillmentReport(lastDays: number = 30) {
   return useQuery({
     queryKey: ["ml-fulfillment-report", lastDays],
     queryFn: async (): Promise<FulfillmentReport> => {
-      const { data, error } = await supabase.functions.invoke("ml-fulfillment-report", {
-        body: null,
-        method: "GET",
-        headers: {},
-      });
-
-      // The invoke doesn't support query params easily, so let's use fetch directly
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
-      
+      if (!token) throw new Error("Não autenticado");
+
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/ml-fulfillment-report?last_days=${lastDays}`,
