@@ -86,6 +86,24 @@ Deno.serve(async (req) => {
       await new Promise((r) => setTimeout(r, 300));
     }
 
+    // Known ML fulfillment center coordinates
+    const KNOWN_CENTERS: Record<string, { lat: number; lng: number }> = {
+      "Cajamar": { lat: -23.35, lng: -46.87 },
+      "Louveira": { lat: -23.08, lng: -46.95 },
+      "Franco da Rocha": { lat: -23.32, lng: -46.73 },
+      "Extrema": { lat: -22.85, lng: -46.32 },
+      "Nova Santa Rita": { lat: -29.86, lng: -51.28 },
+      "São José dos Pinhais": { lat: -25.53, lng: -49.20 },
+      "Betim": { lat: -19.97, lng: -44.20 },
+      "Raposo Tavares": { lat: -23.59, lng: -46.78 },
+      "Osasco": { lat: -23.53, lng: -46.79 },
+      "Guarulhos": { lat: -23.46, lng: -46.53 },
+      "Ribeirão Preto": { lat: -21.17, lng: -47.81 },
+      "Recife": { lat: -8.05, lng: -34.87 },
+      "Salvador": { lat: -12.97, lng: -38.51 },
+      "Contagem": { lat: -19.93, lng: -44.05 },
+    };
+
     // For each order with shipping, get shipment details
     const fulfillmentCounts: Record<string, { count: number; revenue: number; city?: string; state?: string; lat?: number; lng?: number }> = {};
 
@@ -102,16 +120,16 @@ Deno.serve(async (req) => {
 
         const shipment = await shipRes.json();
 
-        // Check if it's fulfillment
-        const logisticType = shipment.logistic_type || "unknown";
         const senderAddress = shipment.sender_address || {};
         
-        // Use the sender address (warehouse/fulfillment center) info
         const city = senderAddress.city?.name || "Desconhecido";
         const state = senderAddress.state?.name || "Desconhecido";
         const stateId = senderAddress.state?.id || "unknown";
-        const lat = senderAddress.latitude;
-        const lng = senderAddress.longitude;
+        
+        // Use known coordinates or fallback to API values
+        const known = KNOWN_CENTERS[city];
+        const lat = known?.lat || senderAddress.latitude || 0;
+        const lng = known?.lng || senderAddress.longitude || 0;
 
         const key = `${city}-${stateId}`;
 
