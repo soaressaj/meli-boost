@@ -104,29 +104,52 @@ Deno.serve(async (req) => {
       "Contagem": { lat: -19.93, lng: -44.05 },
     };
 
-    // For each order with shipping, get shipment details
+    // For each order with shipping, get shipment details in batches of 10
     const fulfillmentCounts: Record<string, { count: number; revenue: number; city?: string; state?: string; lat?: number; lng?: number }> = {};
+    const ordersWithShipping = allOrders.filter((o: any) => o.shipping?.id);
+    
+    // Process unique shipping IDs only (avoid duplicates)
+    const seen = new Set<number>();
+    const uniqueOrders: any[] = [];
+    for (const order of ordersWithShipping) {
+      if (!seen.has(order.shipping.id)) {
+        seen.add(order.shipping.id);
+        uniqueOrders.push(order);
+      }
+    }
 
-    for (const order of allOrders) {
-      if (!order.shipping?.id) continue;
+    // For large sets, sample up to 200 shipments to stay within timeout
+    // Then extrapolate the distribution for the remaining orders
+    const MAX_SHIPMENT_CALLS = 200;
+    const sampled = uniqueOrders.length > MAX_SHIPMENT_CALLS;
+    const ordersToFetch = sampled ? uniqueOrders.slice(0, MAX_SHIPMENT_CALLS) : uniqueOrders;
+    const totalOrderCount = ordersWithShipping.length;
 
-      try {
-        const shipRes = await fetch(
-          `https://api.mercadolibre.com/shipments/${order.shipping.id}`,
-          { headers: { Authorization: `Bearer ${access_token}` } }
-        );
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < ordersToFetch.length; i += BATCH_SIZE) {
+      const batch = ordersToFetch.slice(i, i + BATCH_SIZE);
+      
+      const results = await Promise.allSettled(
+        batch.map(async (order: any) => {
+          const shipRes = await fetch(
+            `https://api.mercadolibre.com/shipments/${order.shipping.id}`,
+            { headers: { Authorization: `Bearer ${access_token}` } }
+          );
+          if (!shipRes.ok) return null;
+          const shipment = await shipRes.json();
+          return { shipment, order };
+        })
+      );
 
-        if (!shipRes.ok) continue;
-
-        const shipment = await shipRes.json();
+      for (const result of results) {
+        if (result.status !== "fulfilled" || !result.value) continue;
+        const { shipment, order } = result.value;
 
         const senderAddress = shipment.sender_address || {};
-        
         const city = senderAddress.city?.name || "Desconhecido";
         const state = senderAddress.state?.name || "Desconhecido";
         const stateId = senderAddress.state?.id || "unknown";
         
-        // Use known coordinates or fallback to API values
         const known = KNOWN_CENTERS[city];
         const lat = known?.lat || senderAddress.latitude || 0;
         const lng = known?.lng || senderAddress.longitude || 0;
@@ -139,11 +162,23 @@ Deno.serve(async (req) => {
 
         fulfillmentCounts[key].count += 1;
         fulfillmentCounts[key].revenue += order.total_amount || 0;
+      }
 
-        // Rate limiting
+      // Rate limiting between batches
+      if (i + BATCH_SIZE < ordersToFetch.length) {
         await new Promise((r) => setTimeout(r, 200));
-      } catch (e) {
-        console.error("Error fetching shipment:", e);
+      }
+    }
+
+    // If sampled, extrapolate proportionally
+    if (sampled) {
+      const sampledTotal = Object.values(fulfillmentCounts).reduce((s, c) => s + c.count, 0);
+      if (sampledTotal > 0) {
+        const scale = totalOrderCount / sampledTotal;
+        for (const key of Object.keys(fulfillmentCounts)) {
+          fulfillmentCounts[key].count = Math.round(fulfillmentCounts[key].count * scale);
+          fulfillmentCounts[key].revenue = fulfillmentCounts[key].revenue * scale;
+        }
       }
     }
 
@@ -160,7 +195,7 @@ Deno.serve(async (req) => {
     // Sort by count desc
     centers.sort((a, b) => b.count - a.count);
 
-    const totalOrders = centers.reduce((sum, c) => sum + c.count, 0);
+    const totalOrders = sampled ? totalOrderCount : centers.reduce((sum, c) => sum + c.count, 0);
 
     return new Response(
       JSON.stringify({
