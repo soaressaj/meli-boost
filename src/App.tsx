@@ -13,6 +13,7 @@ import Marketplaces from "./pages/app/Marketplaces";
 import CustosImpostos from "./pages/app/CustosImpostos";
 import Calculadoras from "./pages/app/Calculadoras";
 import DRE from "./pages/app/DRE";
+import Full from "./pages/app/Full";
 import Conta from "./pages/app/Conta";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route index element={<Navigate to="/app/vendas" replace />} />
             <Route path="vendas" element={<VendasAoVivo />} />
             <Route path="marketplaces" element={<Marketplaces />} />
+            <Route path="full" element={<Full />} />
             <Route path="custos" element={<CustosImpostos />} />
             <Route path="calculadoras" element={<Calculadoras />} />
             <Route path="dre" element={<DRE />} />

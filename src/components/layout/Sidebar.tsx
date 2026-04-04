@@ -22,12 +22,14 @@ import {
   User,
   LogOut,
   Zap,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const navItems = [
   { title: "Vendas ao Vivo", url: "/app/vendas", icon: BarChart3 },
   { title: "ADS", url: "/app/marketplaces", icon: ShoppingCart },
+  { title: "Full", url: "/app/full", icon: Package },
   { title: "Custos & Impostos", url: "/app/custos", icon: DollarSign },
   { title: "Calculadoras", url: "/app/calculadoras", icon: Calculator },
   { title: "DRE", url: "/app/dre", icon: TrendingUp },
