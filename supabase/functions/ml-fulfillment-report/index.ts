@@ -104,29 +104,45 @@ Deno.serve(async (req) => {
       "Contagem": { lat: -19.93, lng: -44.05 },
     };
 
-    // For each order with shipping, get shipment details
+    // For each order with shipping, get shipment details in batches of 5
     const fulfillmentCounts: Record<string, { count: number; revenue: number; city?: string; state?: string; lat?: number; lng?: number }> = {};
+    const ordersWithShipping = allOrders.filter((o: any) => o.shipping?.id);
+    
+    // Process unique shipping IDs only (avoid duplicates)
+    const seen = new Set<number>();
+    const uniqueOrders: any[] = [];
+    for (const order of ordersWithShipping) {
+      if (!seen.has(order.shipping.id)) {
+        seen.add(order.shipping.id);
+        uniqueOrders.push(order);
+      }
+    }
 
-    for (const order of allOrders) {
-      if (!order.shipping?.id) continue;
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < uniqueOrders.length; i += BATCH_SIZE) {
+      const batch = uniqueOrders.slice(i, i + BATCH_SIZE);
+      
+      const results = await Promise.allSettled(
+        batch.map(async (order: any) => {
+          const shipRes = await fetch(
+            `https://api.mercadolibre.com/shipments/${order.shipping.id}`,
+            { headers: { Authorization: `Bearer ${access_token}` } }
+          );
+          if (!shipRes.ok) return null;
+          const shipment = await shipRes.json();
+          return { shipment, order };
+        })
+      );
 
-      try {
-        const shipRes = await fetch(
-          `https://api.mercadolibre.com/shipments/${order.shipping.id}`,
-          { headers: { Authorization: `Bearer ${access_token}` } }
-        );
-
-        if (!shipRes.ok) continue;
-
-        const shipment = await shipRes.json();
+      for (const result of results) {
+        if (result.status !== "fulfilled" || !result.value) continue;
+        const { shipment, order } = result.value;
 
         const senderAddress = shipment.sender_address || {};
-        
         const city = senderAddress.city?.name || "Desconhecido";
         const state = senderAddress.state?.name || "Desconhecido";
         const stateId = senderAddress.state?.id || "unknown";
         
-        // Use known coordinates or fallback to API values
         const known = KNOWN_CENTERS[city];
         const lat = known?.lat || senderAddress.latitude || 0;
         const lng = known?.lng || senderAddress.longitude || 0;
@@ -139,11 +155,11 @@ Deno.serve(async (req) => {
 
         fulfillmentCounts[key].count += 1;
         fulfillmentCounts[key].revenue += order.total_amount || 0;
+      }
 
-        // Rate limiting
-        await new Promise((r) => setTimeout(r, 200));
-      } catch (e) {
-        console.error("Error fetching shipment:", e);
+      // Rate limiting between batches
+      if (i + BATCH_SIZE < uniqueOrders.length) {
+        await new Promise((r) => setTimeout(r, 300));
       }
     }
 
