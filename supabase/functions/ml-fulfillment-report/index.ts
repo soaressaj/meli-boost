@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       "Contagem": { lat: -19.93, lng: -44.05 },
     };
 
-    // For each order with shipping, get shipment details in batches of 5
+    // For each order with shipping, get shipment details in batches of 10
     const fulfillmentCounts: Record<string, { count: number; revenue: number; city?: string; state?: string; lat?: number; lng?: number }> = {};
     const ordersWithShipping = allOrders.filter((o: any) => o.shipping?.id);
     
@@ -117,6 +117,13 @@ Deno.serve(async (req) => {
         uniqueOrders.push(order);
       }
     }
+
+    // For large sets, sample up to 200 shipments to stay within timeout
+    // Then extrapolate the distribution for the remaining orders
+    const MAX_SHIPMENT_CALLS = 200;
+    const sampled = uniqueOrders.length > MAX_SHIPMENT_CALLS;
+    const ordersToFetch = sampled ? uniqueOrders.slice(0, MAX_SHIPMENT_CALLS) : uniqueOrders;
+    const totalOrderCount = ordersWithShipping.length;
 
     const BATCH_SIZE = 5;
     for (let i = 0; i < uniqueOrders.length; i += BATCH_SIZE) {
