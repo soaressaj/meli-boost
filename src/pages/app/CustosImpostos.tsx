@@ -1,15 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/layout/Layout";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save } from "lucide-react";
+import { Save, Settings, Calculator } from "lucide-react";
+import { PrecificacaoSimulator } from "@/components/precificacao/PrecificacaoSimulator";
+import { useEffect } from "react";
 
-export default function CustosImpostos() {
-  const { user } = useAuth();
+function ConfigGeral({ user }: { user: any }) {
   const { settings, isLoading, saveSettings } = useUserSettings(user?.id);
 
   const [form, setForm] = useState({
@@ -38,69 +40,83 @@ export default function CustosImpostos() {
 
   const handleSave = () => {
     const taxa = form.taxa_antecipacao > 1 ? form.taxa_antecipacao / 100 : form.taxa_antecipacao;
-    saveSettings({
-      ...form,
-      taxa_antecipacao: taxa,
-    });
+    saveSettings({ ...form, taxa_antecipacao: taxa });
   };
 
   return (
-    <div className="max-w-2xl space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-bold text-foreground">Custos & Impostos</h1>
-
-      <div className="bg-card rounded-lg border shadow-sm p-6 space-y-6">
-        <div className="space-y-2">
-          <Label>Regime tributário</Label>
-          <Select value={form.regime_tributario} onValueChange={(v) => setForm({ ...form, regime_tributario: v })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="simples">Simples Nacional</SelectItem>
-              <SelectItem value="presumido">Lucro Presumido</SelectItem>
-              <SelectItem value="mei">MEI</SelectItem>
-              <SelectItem value="isento">Isento</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Alíquota de imposto (%)</Label>
-            <Input type="number" step="0.01" value={form.aliquota_imposto} onChange={(e) => setForm({ ...form, aliquota_imposto: Number(e.target.value) })} />
-          </div>
-          <div className="space-y-2">
-            <Label>Custo fixo mensal (R$)</Label>
-            <Input type="number" step="0.01" value={form.custo_fixo_mensal} onChange={(e) => setForm({ ...form, custo_fixo_mensal: Number(e.target.value) })} />
-          </div>
-          <div className="space-y-2">
-            <Label>Custo médio frete por pedido (R$)</Label>
-            <Input type="number" step="0.01" value={form.custo_frete_por_pedido} onChange={(e) => setForm({ ...form, custo_frete_por_pedido: Number(e.target.value) })} />
-          </div>
-          <div className="space-y-2">
-            <Label>Custo produto (% do faturamento)</Label>
-            <Input type="number" step="0.01" value={form.custo_produto_percentual} onChange={(e) => setForm({ ...form, custo_produto_percentual: Number(e.target.value) })} />
-          </div>
-        </div>
-
-        <div className="border-t pt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Antecipação de recebíveis</Label>
-            <Switch checked={form.antecipacao_ativa} onCheckedChange={(v) => setForm({ ...form, antecipacao_ativa: v })} />
-          </div>
-          {form.antecipacao_ativa && (
-            <div className="space-y-2">
-              <Label>Taxa de antecipação (%)</Label>
-              <Input type="number" step="0.01" value={form.taxa_antecipacao} onChange={(e) => setForm({ ...form, taxa_antecipacao: Number(e.target.value) })} />
-              <p className="text-xs text-muted-foreground">Se valor &gt; 1, será normalizado automaticamente (ex: 3.8 → 0.038)</p>
-            </div>
-          )}
-        </div>
-
-        <Button onClick={handleSave} className="gap-2">
-          <Save className="h-4 w-4" /> Salvar configurações
-        </Button>
+    <div className="bg-card rounded-lg border shadow-sm p-6 space-y-6">
+      <div className="space-y-2">
+        <Label>Regime tributário</Label>
+        <Select value={form.regime_tributario} onValueChange={(v) => setForm({ ...form, regime_tributario: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="simples">Simples Nacional</SelectItem>
+            <SelectItem value="presumido">Lucro Presumido</SelectItem>
+            <SelectItem value="mei">MEI</SelectItem>
+            <SelectItem value="isento">Isento</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Alíquota de imposto (%)</Label>
+          <Input type="number" step="0.01" value={form.aliquota_imposto} onChange={(e) => setForm({ ...form, aliquota_imposto: Number(e.target.value) })} />
+        </div>
+        <div className="space-y-2">
+          <Label>Custo fixo mensal (R$)</Label>
+          <Input type="number" step="0.01" value={form.custo_fixo_mensal} onChange={(e) => setForm({ ...form, custo_fixo_mensal: Number(e.target.value) })} />
+        </div>
+        <div className="space-y-2">
+          <Label>Custo médio frete por pedido (R$)</Label>
+          <Input type="number" step="0.01" value={form.custo_frete_por_pedido} onChange={(e) => setForm({ ...form, custo_frete_por_pedido: Number(e.target.value) })} />
+        </div>
+        <div className="space-y-2">
+          <Label>Custo produto (% do faturamento)</Label>
+          <Input type="number" step="0.01" value={form.custo_produto_percentual} onChange={(e) => setForm({ ...form, custo_produto_percentual: Number(e.target.value) })} />
+        </div>
+      </div>
+      <div className="border-t pt-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <Label>Antecipação de recebíveis</Label>
+          <Switch checked={form.antecipacao_ativa} onCheckedChange={(v) => setForm({ ...form, antecipacao_ativa: v })} />
+        </div>
+        {form.antecipacao_ativa && (
+          <div className="space-y-2">
+            <Label>Taxa de antecipação (%)</Label>
+            <Input type="number" step="0.01" value={form.taxa_antecipacao} onChange={(e) => setForm({ ...form, taxa_antecipacao: Number(e.target.value) })} />
+          </div>
+        )}
+      </div>
+      <Button onClick={handleSave} className="gap-2">
+        <Save className="h-4 w-4" /> Salvar configurações
+      </Button>
+    </div>
+  );
+}
+
+export default function CustosImpostos() {
+  const { user } = useAuth();
+
+  return (
+    <div className="max-w-4xl space-y-6 animate-fade-in">
+      <h1 className="text-2xl font-bold text-foreground">Custos & Precificação</h1>
+
+      <Tabs defaultValue="precificacao">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="precificacao" className="gap-2">
+            <Calculator className="h-4 w-4" /> Precificação
+          </TabsTrigger>
+          <TabsTrigger value="config" className="gap-2">
+            <Settings className="h-4 w-4" /> Configurações Gerais
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="precificacao">
+          <PrecificacaoSimulator />
+        </TabsContent>
+        <TabsContent value="config">
+          <ConfigGeral user={user} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
