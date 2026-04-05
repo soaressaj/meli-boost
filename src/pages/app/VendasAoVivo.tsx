@@ -4,6 +4,7 @@ import { useMPPayments } from "@/hooks/useMPPayments";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useRealtimePayments } from "@/hooks/useRealtimePayments";
 import { FaturamentoHeader } from "@/components/vendas/FaturamentoHeader";
+import { DailyRevenueChart } from "@/components/vendas/DailyRevenueChart";
 import { PeriodFilter } from "@/components/vendas/PeriodFilter";
 import { KPICards } from "@/components/vendas/KPICards";
 import { AdsSection } from "@/components/vendas/AdsSection";
