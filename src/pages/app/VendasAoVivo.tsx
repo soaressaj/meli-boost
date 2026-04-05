@@ -4,6 +4,7 @@ import { useMPPayments } from "@/hooks/useMPPayments";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useRealtimePayments } from "@/hooks/useRealtimePayments";
 import { FaturamentoHeader } from "@/components/vendas/FaturamentoHeader";
+import { DailyRevenueChart } from "@/components/vendas/DailyRevenueChart";
 import { PeriodFilter } from "@/components/vendas/PeriodFilter";
 import { KPICards } from "@/components/vendas/KPICards";
 import { AdsSection } from "@/components/vendas/AdsSection";
@@ -37,6 +38,7 @@ export default function VendasAoVivo() {
         <FaturamentoHeader payments={payments} isLoading={isLoading} />
       </div>
       <PeriodFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
+      <DailyRevenueChart payments={payments} isLoading={isLoading} settings={settings} />
       <KPICards payments={payments} settings={settings} isLoading={isLoading} />
       <AdsSection settings={settings} totalBruto={totalBruto} onToggleAds={handleToggleAds} />
       <SalesTable payments={payments} isLoading={isLoading} />
