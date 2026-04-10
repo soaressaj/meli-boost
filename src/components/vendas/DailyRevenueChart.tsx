@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import type { MPPayment } from "@/types/mercadopago";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
+import type { MPPayment, DateRange } from "@/types/mercadopago";
 import type { AdsReportDay } from "@/hooks/useMLAdsReport";
-import { format, parseISO, isToday } from "date-fns";
+import { format, parseISO, isToday, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Props {
@@ -10,9 +10,17 @@ interface Props {
   isLoading: boolean;
   settings: any;
   adsReport?: AdsReportDay[];
+  dateRange: DateRange;
+  adsIgnorado: boolean;
 }
 
 function fmt(v: number) {
+  if (v === 0) return "";
+  if (v >= 1000) return `R$${(v / 1000).toFixed(1)}k`;
+  return `R$${v.toFixed(0)}`;
+}
+
+function fmtFull(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 
@@ -30,10 +38,9 @@ interface DayData {
   isToday: boolean;
 }
 
-export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [] }: Props) {
+export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [], dateRange, adsIgnorado }: Props) {
   const chartData = useMemo(() => {
     const approved = payments.filter((p) => p.status === "approved");
-    if (approved.length === 0) return [];
 
     // Build ads cost lookup by date
     const adsCostByDate: Record<string, number> = {};
@@ -41,7 +48,7 @@ export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [
       adsCostByDate[ad.date] = (adsCostByDate[ad.date] || 0) + ad.cost;
     });
 
-    // Group by day
+    // Group payments by day
     const byDay: Record<string, MPPayment[]> = {};
     approved.forEach((p) => {
       const dateStr = p.date_approved ? p.date_approved.split("T")[0] : p.date_created.split("T")[0];
@@ -49,10 +56,12 @@ export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [
       byDay[dateStr].push(p);
     });
 
-    const sortedDays = Object.keys(byDay).sort();
+    // Generate all days in the range
+    const allDays = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
 
-    return sortedDays.map((dateStr): DayData => {
-      const dayPayments = byDay[dateStr];
+    return allDays.map((dayObj): DayData => {
+      const dateStr = format(dayObj, "yyyy-MM-dd");
+      const dayPayments = byDay[dateStr] || [];
       const faturamento = dayPayments.reduce((s, p) => s + p.transaction_amount, 0);
       const totalTarifas = dayPayments.reduce(
         (s, p) => s + p.fee_details.reduce((fs, f) => fs + f.amount, 0), 0
@@ -73,17 +82,18 @@ export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [
       const gastoAds = adsCostByDate[dateStr] || 0;
       const gastoAfiliados = 0;
 
-      const lucro = faturamento - totalTarifas - custoProduto - impostos - freteTotal - gastoAds - gastoAfiliados;
+      // If ads_ignorado is true, don't subtract ads from profit
+      const adsDeduction = adsIgnorado ? 0 : gastoAds;
+      const lucro = faturamento - totalTarifas - custoProduto - impostos - freteTotal - adsDeduction - gastoAfiliados;
 
-      const dateObj = parseISO(dateStr);
-      const today = isToday(dateObj);
+      const today = isToday(dayObj);
 
       return {
         date: dateStr,
-        label: format(dateObj, "dd/MM", { locale: ptBR }),
+        label: format(dayObj, "dd/MM", { locale: ptBR }),
         faturamento,
         lucro: Math.max(lucro, 0),
-        gastoAds,
+        gastoAds: adsIgnorado ? 0 : gastoAds,
         gastoAfiliados,
         totalVendas,
         vendasAds,
@@ -92,13 +102,15 @@ export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [
         isToday: today,
       };
     });
-  }, [payments, settings, adsReport]);
+  }, [payments, settings, adsReport, dateRange, adsIgnorado]);
 
   if (isLoading || chartData.length === 0) {
     return null;
   }
 
-  const maxValue = Math.max(...chartData.map((d) => d.faturamento));
+  const barCount = chartData.length;
+  const chartHeight = Math.max(320, 50);
+  const showCompact = barCount > 15;
 
   return (
     <div className="bg-card rounded-lg border shadow-sm p-6 space-y-4">
@@ -109,10 +121,12 @@ export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [
             <div className="w-3 h-3 rounded-sm bg-[hsl(var(--success))]" />
             <span className="text-muted-foreground">Lucro</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-[hsl(var(--destructive))]" />
-            <span className="text-muted-foreground">Ads</span>
-          </div>
+          {!adsIgnorado && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-[hsl(var(--destructive))]" />
+              <span className="text-muted-foreground">Ads</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm bg-[hsl(var(--warning))]" />
             <span className="text-muted-foreground">Afiliados</span>
@@ -120,56 +134,70 @@ export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [
         </div>
       </div>
 
-      <div className="w-full" style={{ height: Math.max(300, 40) }}>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} barCategoryGap="15%">
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) => `R$${(v / 1000).toFixed(v >= 1000 ? 1 : 0)}${v >= 1000 ? 'k' : ''}`}
-              width={60}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.3)" }} />
-            <Bar dataKey="lucro" stackId="total" radius={[0, 0, 0, 0]} name="Lucro">
-              {chartData.map((entry, i) => (
-                <Cell
-                  key={i}
-                  fill={entry.isToday ? "hsl(var(--success))" : "hsl(153 60% 45%)"}
-                  opacity={entry.isToday ? 1 : 0.7}
+      <div className="w-full overflow-x-auto">
+        <div style={{ minWidth: Math.max(barCount * 48, 400), height: chartHeight }}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart data={chartData} barCategoryGap={barCount > 20 ? "8%" : "15%"}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: showCompact ? 9 : 11, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+                angle={barCount > 20 ? -45 : 0}
+                textAnchor={barCount > 20 ? "end" : "middle"}
+                height={barCount > 20 ? 50 : 30}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `R$${(v / 1000).toFixed(v >= 1000 ? 1 : 0)}${v >= 1000 ? 'k' : ''}`}
+                width={60}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.3)" }} />
+              <Bar dataKey="lucro" stackId="total" radius={[0, 0, 0, 0]} name="Lucro">
+                {chartData.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill={entry.isToday ? "hsl(var(--success))" : "hsl(153 60% 45%)"}
+                    opacity={entry.isToday ? 1 : 0.7}
+                  />
+                ))}
+                <LabelList
+                  dataKey="totalVendas"
+                  position="top"
+                  formatter={(v: number) => v > 0 ? `${v}` : ""}
+                  style={{ fontSize: showCompact ? 8 : 10, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }}
                 />
-              ))}
-            </Bar>
-            <Bar dataKey="gastoAds" stackId="total" radius={[0, 0, 0, 0]} name="Ads">
-              {chartData.map((entry, i) => (
-                <Cell
-                  key={i}
-                  fill="hsl(var(--destructive))"
-                  opacity={entry.isToday ? 1 : 0.7}
-                />
-              ))}
-            </Bar>
-            <Bar dataKey="gastoAfiliados" stackId="total" radius={[4, 4, 0, 0]} name="Afiliados">
-              {chartData.map((entry, i) => (
-                <Cell
-                  key={i}
-                  fill="hsl(var(--warning))"
-                  opacity={entry.isToday ? 1 : 0.7}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+              </Bar>
+              {!adsIgnorado && (
+                <Bar dataKey="gastoAds" stackId="total" radius={[0, 0, 0, 0]} name="Ads">
+                  {chartData.map((entry, i) => (
+                    <Cell
+                      key={i}
+                      fill="hsl(var(--destructive))"
+                      opacity={entry.isToday ? 1 : 0.7}
+                    />
+                  ))}
+                </Bar>
+              )}
+              <Bar dataKey="gastoAfiliados" stackId="total" radius={[4, 4, 0, 0]} name="Afiliados">
+                {chartData.map((entry, i) => (
+                  <Cell
+                    key={i}
+                    fill="hsl(var(--warning))"
+                    opacity={entry.isToday ? 1 : 0.7}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      {/* Daily sales summary below chart */}
+      {/* Daily summary cards - show last 7 or all if <= 7 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
         {chartData.slice(-7).map((day) => (
           <div
@@ -182,7 +210,7 @@ export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [
           >
             <p className="text-[10px] text-muted-foreground">{day.label}</p>
             <p className={`text-xs font-bold ${day.isToday ? "text-foreground" : "text-foreground/80"}`}>
-              {fmt(day.faturamento)}
+              {fmtFull(day.faturamento)}
             </p>
             <p className="text-[10px] text-muted-foreground">{day.totalVendas} vendas</p>
             <div className="flex justify-center gap-1 mt-1">
@@ -209,22 +237,22 @@ function CustomTooltip({ active, payload, label }: any) {
       <div className="space-y-1">
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Faturamento:</span>
-          <span className="font-bold text-foreground">{fmt(data.faturamento)}</span>
+          <span className="font-bold text-foreground">{fmtFull(data.faturamento)}</span>
         </div>
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Lucro:</span>
-          <span className="font-bold text-success">{fmt(data.lucro)}</span>
+          <span className="font-bold text-success">{fmtFull(data.lucro)}</span>
         </div>
         {data.gastoAds > 0 && (
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Gasto Ads:</span>
-            <span className="font-bold text-destructive">{fmt(data.gastoAds)}</span>
+            <span className="font-bold text-destructive">{fmtFull(data.gastoAds)}</span>
           </div>
         )}
         {data.gastoAfiliados > 0 && (
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Afiliados:</span>
-            <span className="font-bold text-warning">{fmt(data.gastoAfiliados)}</span>
+            <span className="font-bold text-warning">{fmtFull(data.gastoAfiliados)}</span>
           </div>
         )}
         <div className="border-t pt-1 mt-1 flex justify-between gap-4">
