@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { MPPayment } from "@/types/mercadopago";
+import type { AdsReportDay } from "@/hooks/useMLAdsReport";
 import { format, parseISO, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -8,6 +9,7 @@ interface Props {
   payments: MPPayment[];
   isLoading: boolean;
   settings: any;
+  adsReport?: AdsReportDay[];
 }
 
 function fmt(v: number) {
@@ -28,10 +30,16 @@ interface DayData {
   isToday: boolean;
 }
 
-export function DailyRevenueChart({ payments, isLoading, settings }: Props) {
+export function DailyRevenueChart({ payments, isLoading, settings, adsReport = [] }: Props) {
   const chartData = useMemo(() => {
     const approved = payments.filter((p) => p.status === "approved");
     if (approved.length === 0) return [];
+
+    // Build ads cost lookup by date
+    const adsCostByDate: Record<string, number> = {};
+    adsReport.forEach((ad) => {
+      adsCostByDate[ad.date] = (adsCostByDate[ad.date] || 0) + ad.cost;
+    });
 
     // Group by day
     const byDay: Record<string, MPPayment[]> = {};
@@ -41,7 +49,6 @@ export function DailyRevenueChart({ payments, isLoading, settings }: Props) {
       byDay[dateStr].push(p);
     });
 
-    // Sort by date
     const sortedDays = Object.keys(byDay).sort();
 
     return sortedDays.map((dateStr): DayData => {
@@ -51,31 +58,22 @@ export function DailyRevenueChart({ payments, isLoading, settings }: Props) {
         (s, p) => s + p.fee_details.reduce((fs, f) => fs + f.amount, 0), 0
       );
 
-      // Detect channel from fee_details names in raw data
-      // "ml_sale_fee" = organic, ads payments have specific markers
-      // For now we estimate: if description contains "publicidad" or similar → ads
-      let vendasAds = 0;
-      let vendasAfiliados = 0;
-      let vendasOrganicas = 0;
-
-      dayPayments.forEach((p) => {
-        // We don't have direct channel info from payments API
-        // All sales count as organic for now
-        vendasOrganicas++;
-      });
-
       const totalVendas = dayPayments.length;
+      const vendasOrganicas = totalVendas;
+      const vendasAds = 0;
+      const vendasAfiliados = 0;
+
       const custoPercent = settings?.custo_produto_percentual || 0;
       const aliquota = settings?.aliquota_imposto || 0;
       const custoFrete = settings?.custo_frete_por_pedido || 0;
       const custoProduto = faturamento * (custoPercent / 100);
       const impostos = faturamento * (aliquota / 100);
       const freteTotal = totalVendas * custoFrete;
-      const lucro = faturamento - totalTarifas - custoProduto - impostos - freteTotal;
 
-      // Placeholder for ads/affiliates cost per day
-      const gastoAds = 0;
+      const gastoAds = adsCostByDate[dateStr] || 0;
       const gastoAfiliados = 0;
+
+      const lucro = faturamento - totalTarifas - custoProduto - impostos - freteTotal - gastoAds - gastoAfiliados;
 
       const dateObj = parseISO(dateStr);
       const today = isToday(dateObj);
@@ -94,7 +92,7 @@ export function DailyRevenueChart({ payments, isLoading, settings }: Props) {
         isToday: today,
       };
     });
-  }, [payments, settings]);
+  }, [payments, settings, adsReport]);
 
   if (isLoading || chartData.length === 0) {
     return null;
