@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Settings, Calculator } from "lucide-react";
+import { Save, Settings, Calculator, List } from "lucide-react";
 import { PrecificacaoSimulator } from "@/components/precificacao/PrecificacaoSimulator";
+import { ListingPricingList } from "@/components/precificacao/ListingPricingList";
 import { useEffect } from "react";
 
 function ConfigGeral({ user }: { user: any }) {
@@ -98,18 +99,24 @@ export default function CustosImpostos() {
   const { user } = useAuth();
 
   return (
-    <div className="max-w-4xl space-y-6 animate-fade-in">
+    <div className="max-w-5xl space-y-6 animate-fade-in">
       <h1 className="text-2xl font-bold text-foreground">Custos & Precificação</h1>
 
-      <Tabs defaultValue="precificacao">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="anuncios">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="anuncios" className="gap-2">
+            <List className="h-4 w-4" /> Anúncios Ativos
+          </TabsTrigger>
           <TabsTrigger value="precificacao" className="gap-2">
-            <Calculator className="h-4 w-4" /> Precificação
+            <Calculator className="h-4 w-4" /> Simulação Manual
           </TabsTrigger>
           <TabsTrigger value="config" className="gap-2">
-            <Settings className="h-4 w-4" /> Configurações Gerais
+            <Settings className="h-4 w-4" /> Configurações
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="anuncios">
+          <ListingPricingList />
+        </TabsContent>
         <TabsContent value="precificacao">
           <PrecificacaoSimulator />
         </TabsContent>
