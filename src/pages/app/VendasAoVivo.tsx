@@ -43,7 +43,7 @@ export default function VendasAoVivo() {
         <FaturamentoHeader payments={payments} isLoading={isLoading} />
       </div>
       <PeriodFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
-      <DailyRevenueChart payments={payments} isLoading={isLoading} settings={settings} adsReport={adsReport} />
+      <DailyRevenueChart payments={payments} isLoading={isLoading} settings={settings} adsReport={adsReport} dateRange={dateRange} adsIgnorado={settings?.ads_ignorado ?? false} />
       <KPICards payments={payments} settings={settings} isLoading={isLoading} />
       <AdsSection settings={settings} totalBruto={totalBruto} onToggleAds={handleToggleAds} />
       <SalesTable payments={payments} isLoading={isLoading} />
