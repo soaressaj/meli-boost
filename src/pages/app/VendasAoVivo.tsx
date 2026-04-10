@@ -3,6 +3,7 @@ import { useAuth } from "@/components/layout/Layout";
 import { useMPPayments } from "@/hooks/useMPPayments";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useRealtimePayments } from "@/hooks/useRealtimePayments";
+import { useMLAdsReport } from "@/hooks/useMLAdsReport";
 import { FaturamentoHeader } from "@/components/vendas/FaturamentoHeader";
 import { DailyRevenueChart } from "@/components/vendas/DailyRevenueChart";
 import { PeriodFilter } from "@/components/vendas/PeriodFilter";
@@ -21,6 +22,10 @@ export default function VendasAoVivo() {
   const { data: payments = [], isLoading, refetch } = useMPPayments(dateRange, user?.id);
   const { settings, saveSettings } = useUserSettings(user?.id);
 
+  const dateFrom = dateRange.start.toISOString().split("T")[0];
+  const dateTo = dateRange.end.toISOString().split("T")[0];
+  const { data: adsReport = [] } = useMLAdsReport(dateFrom, dateTo, !!user?.id);
+
   // Realtime: plays sound on new sale and auto-refetches data
   useRealtimePayments(user?.id);
 
@@ -38,7 +43,7 @@ export default function VendasAoVivo() {
         <FaturamentoHeader payments={payments} isLoading={isLoading} />
       </div>
       <PeriodFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
-      <DailyRevenueChart payments={payments} isLoading={isLoading} settings={settings} />
+      <DailyRevenueChart payments={payments} isLoading={isLoading} settings={settings} adsReport={adsReport} />
       <KPICards payments={payments} settings={settings} isLoading={isLoading} />
       <AdsSection settings={settings} totalBruto={totalBruto} onToggleAds={handleToggleAds} />
       <SalesTable payments={payments} isLoading={isLoading} />
