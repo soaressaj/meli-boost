@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      listing_pricing: {
+        Row: {
+          bonus_afiliados: number | null
+          bonus_campanha: number | null
+          created_at: string
+          custo_produto: number | null
+          diferenca_icms: number | null
+          embalagem: number | null
+          etiqueta: number | null
+          faixa_peso: string | null
+          frete_manual: number | null
+          icms_estado: number | null
+          id: string
+          is_alimento_animal: boolean | null
+          is_full: boolean | null
+          is_kit: boolean | null
+          margem_desejada: number | null
+          ml_item_id: string
+          price: number | null
+          qtd_kit: number | null
+          taxa_anuncio: number | null
+          thumbnail: string | null
+          title: string | null
+          transporte: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_afiliados?: number | null
+          bonus_campanha?: number | null
+          created_at?: string
+          custo_produto?: number | null
+          diferenca_icms?: number | null
+          embalagem?: number | null
+          etiqueta?: number | null
+          faixa_peso?: string | null
+          frete_manual?: number | null
+          icms_estado?: number | null
+          id?: string
+          is_alimento_animal?: boolean | null
+          is_full?: boolean | null
+          is_kit?: boolean | null
+          margem_desejada?: number | null
+          ml_item_id: string
+          price?: number | null
+          qtd_kit?: number | null
+          taxa_anuncio?: number | null
+          thumbnail?: string | null
+          title?: string | null
+          transporte?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_afiliados?: number | null
+          bonus_campanha?: number | null
+          created_at?: string
+          custo_produto?: number | null
+          diferenca_icms?: number | null
+          embalagem?: number | null
+          etiqueta?: number | null
+          faixa_peso?: string | null
+          frete_manual?: number | null
+          icms_estado?: number | null
+          id?: string
+          is_alimento_animal?: boolean | null
+          is_full?: boolean | null
+          is_kit?: boolean | null
+          margem_desejada?: number | null
+          ml_item_id?: string
+          price?: number | null
+          qtd_kit?: number | null
+          taxa_anuncio?: number | null
+          thumbnail?: string | null
+          title?: string | null
+          transporte?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mp_connections: {
         Row: {
           access_token: string
