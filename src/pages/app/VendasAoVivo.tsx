@@ -4,37 +4,50 @@ import { useMPPayments } from "@/hooks/useMPPayments";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useRealtimePayments } from "@/hooks/useRealtimePayments";
 import { useMLAdsReport } from "@/hooks/useMLAdsReport";
+import { useMLVisitsReport } from "@/hooks/useMLVisitsReport";
 import { TodayLiveMetrics } from "@/components/vendas/TodayLiveMetrics";
-import { KPICards } from "@/components/vendas/KPICards";
-import { DailyRevenueChart } from "@/components/vendas/DailyRevenueChart";
-import { MonthSummaryBar } from "@/components/vendas/MonthSummaryBar";
+import { MonthlyRevenueChart } from "@/components/vendas/MonthlyRevenueChart";
+import { AnnualRevenueChart } from "@/components/vendas/AnnualRevenueChart";
 import { AdsSection } from "@/components/vendas/AdsSection";
 import { SalesTable } from "@/components/vendas/SalesTable";
-import { PeriodFilter } from "@/components/vendas/PeriodFilter";
-import type { DateRange } from "@/types/mercadopago";
+import { subMonths, format } from "date-fns";
 
 export default function VendasAoVivo() {
   const { user } = useAuth();
-
-  // Default to current month
   const now = new Date();
-  const [dateRange, setDateRange] = useState<DateRange>({
-    start: new Date(now.getFullYear(), now.getMonth(), 1),
-    end: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-  });
 
-  const { data: payments = [], isLoading, refetch } = useMPPayments(dateRange, user?.id);
+  // Current month range for monthly chart
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Last 12 months for annual chart
+  const annualStart = subMonths(new Date(now.getFullYear(), now.getMonth(), 1), 11);
+
+  const { data: monthPayments = [], isLoading } = useMPPayments(
+    { start: monthStart, end: monthEnd },
+    user?.id
+  );
+
+  const { data: annualPayments = [] } = useMPPayments(
+    { start: annualStart, end: monthEnd },
+    user?.id
+  );
+
   const { settings, saveSettings } = useUserSettings(user?.id);
 
-  const dateFrom = dateRange.start.toISOString().split("T")[0];
-  const dateTo = dateRange.end.toISOString().split("T")[0];
+  const dateFrom = monthStart.toISOString().split("T")[0];
+  const dateTo = monthEnd.toISOString().split("T")[0];
   const { data: adsReport = [] } = useMLAdsReport(dateFrom, dateTo, !!user?.id);
+
+  // Visits funnel for today
+  const today = now.toISOString().split("T")[0];
+  const { data: visitsFunnel } = useMLVisitsReport(today, today, 1, !!user?.id);
 
   useRealtimePayments(user?.id);
 
   const adsIgnorado = settings?.ads_ignorado ?? false;
 
-  const totalBruto = payments
+  const totalBruto = monthPayments
     .filter((p) => p.status === "approved")
     .reduce((sum, p) => sum + p.transaction_amount, 0);
 
@@ -43,39 +56,39 @@ export default function VendasAoVivo() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* 1. Vendas ao Vivo - Today's metrics */}
-      <TodayLiveMetrics
-        payments={payments}
-        adsReport={adsReport}
-        isLoading={isLoading}
-        adsIgnorado={adsIgnorado}
-      />
-
-      {/* 2. KPI Cards */}
-      <KPICards payments={payments} settings={settings} isLoading={isLoading} />
-
-      {/* 3. Ads toggle */}
-      <AdsSection settings={settings} totalBruto={totalBruto} onToggleAds={handleToggleAds} />
-
-      {/* 4. Period filter */}
-      <PeriodFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
-
-      {/* 5. Monthly chart with summary */}
-      <div className="space-y-3">
-        <MonthSummaryBar payments={payments} adsReport={adsReport} adsIgnorado={adsIgnorado} />
-        <DailyRevenueChart
-          payments={payments}
-          isLoading={isLoading}
-          settings={settings}
+    <div className="space-y-4 animate-fade-in">
+      {/* Main layout: left panel + right charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
+        {/* Left: Today live metrics */}
+        <TodayLiveMetrics
+          payments={monthPayments}
           adsReport={adsReport}
-          dateRange={dateRange}
+          isLoading={isLoading}
           adsIgnorado={adsIgnorado}
+          visitsFunnel={visitsFunnel}
+          allMonthPayments={monthPayments}
         />
+
+        {/* Right: Charts stacked */}
+        <div className="flex flex-col gap-4">
+          <div className="flex-1 min-h-[280px]">
+            <MonthlyRevenueChart
+              payments={monthPayments}
+              adsReport={adsReport}
+              adsIgnorado={adsIgnorado}
+            />
+          </div>
+          <div className="flex-1 min-h-[280px]">
+            <AnnualRevenueChart payments={annualPayments} />
+          </div>
+        </div>
       </div>
 
-      {/* 6. Sales table */}
-      <SalesTable payments={payments} isLoading={isLoading} />
+      {/* Ads toggle */}
+      <AdsSection settings={settings} totalBruto={totalBruto} onToggleAds={handleToggleAds} />
+
+      {/* Sales table */}
+      <SalesTable payments={monthPayments} isLoading={isLoading} />
     </div>
   );
 }
