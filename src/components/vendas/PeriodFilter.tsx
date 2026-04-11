@@ -36,7 +36,7 @@ interface Props {
 }
 
 export function PeriodFilter({ dateRange, onDateRangeChange }: Props) {
-  const [activePeriod, setActivePeriod] = useState<PeriodKey>("hoje");
+  const [activePeriod, setActivePeriod] = useState<PeriodKey>("mes_atual");
   const [customOpen, setCustomOpen] = useState(false);
 
   const handlePeriodClick = (key: PeriodKey) => {
