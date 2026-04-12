@@ -61,7 +61,7 @@ export function TodayLiveMetrics({ payments, adsReport, isLoading, adsIgnorado, 
 
   if (isLoading) {
     return (
-      <div className="bg-[hsl(var(--success))] rounded-xl p-5 shadow-lg">
+      <div className="bg-[hsl(0,0%,10%)] rounded-xl p-5 shadow-lg">
         <Skeleton className="h-6 w-48 mb-4 bg-white/30" />
         <Skeleton className="h-16 w-40 mx-auto mb-4 bg-white/30" />
         <div className="grid grid-cols-2 gap-3">
@@ -78,7 +78,7 @@ export function TodayLiveMetrics({ payments, adsReport, isLoading, adsIgnorado, 
   const conversao = visitsFunnel?.conversion_rate ?? 0;
 
   return (
-    <div className="bg-gradient-to-br from-[hsl(var(--success))] to-[hsl(153,60%,35%)] rounded-xl p-5 shadow-lg text-white space-y-4">
+    <div className="bg-gradient-to-br from-[hsl(0,0%,8%)] to-[hsl(0,0%,14%)] rounded-xl p-5 shadow-lg text-white space-y-4">
       {/* Header */}
       <div className="text-center space-y-1">
         <h2 className="text-base font-bold tracking-wide">Vendas de hoje ao vivo</h2>
@@ -89,8 +89,8 @@ export function TodayLiveMetrics({ payments, adsReport, isLoading, adsIgnorado, 
       </div>
 
       {/* Main value */}
-      <div className="bg-white/20 backdrop-blur rounded-lg py-3 text-center">
-        <p className="text-3xl font-extrabold tracking-tight">{fmt(metrics.faturamento)}</p>
+      <div className="bg-[hsl(153,100%,40%)]/20 border border-[hsl(153,100%,40%)]/30 backdrop-blur rounded-lg py-3 text-center">
+        <p className="text-3xl font-extrabold tracking-tight text-[hsl(153,100%,60%)]">{fmt(metrics.faturamento)}</p>
       </div>
 
       {/* Row: lucro dia / total a receber */}
