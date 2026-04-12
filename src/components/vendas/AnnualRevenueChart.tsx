@@ -18,7 +18,6 @@ export function AnnualRevenueChart({ payments }: Props) {
   const chartData = useMemo(() => {
     const approved = payments.filter((p) => p.status === "approved");
 
-    // Last 12 months including current
     const months = Array.from({ length: 12 }, (_, i) => {
       const date = subMonths(now, 11 - i);
       return {
@@ -28,27 +27,32 @@ export function AnnualRevenueChart({ payments }: Props) {
       };
     });
 
-    const byMonth: Record<string, number> = {};
+    const byMonth: Record<string, { fat: number; count: number }> = {};
     approved.forEach((p) => {
       const m = (p.date_approved || p.date_created).substring(0, 7);
-      byMonth[m] = (byMonth[m] || 0) + p.transaction_amount;
+      if (!byMonth[m]) byMonth[m] = { fat: 0, count: 0 };
+      byMonth[m].fat += p.transaction_amount;
+      byMonth[m].count += 1;
     });
 
     return months.map((m) => ({
       ...m,
-      faturamento: byMonth[m.key] || 0,
+      faturamento: byMonth[m.key]?.fat || 0,
+      vendas: byMonth[m.key]?.count || 0,
     }));
   }, [payments, now]);
 
   const totalAnual = chartData.reduce((s, d) => s + d.faturamento, 0);
+  const totalVendas = chartData.reduce((s, d) => s + d.vendas, 0);
 
   return (
     <div className="bg-card rounded-xl border shadow-sm p-4 space-y-3 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-foreground">Faturamento Anual</h2>
-        <span className="text-xs text-muted-foreground">
-          Total: <strong className="text-foreground">{fmtFull(totalAnual)}</strong>
-        </span>
+        <div className="flex gap-3 text-xs text-muted-foreground">
+          <span>Total: <strong className="text-foreground">{fmtFull(totalAnual)}</strong></span>
+          <span>Vendas: <strong className="text-foreground">{totalVendas}</strong></span>
+        </div>
       </div>
 
       <div className="flex-1 min-h-[200px]">
@@ -70,6 +74,7 @@ export function AnnualRevenueChart({ payments }: Props) {
                   <div className="bg-background border rounded-lg shadow-lg p-2 text-xs">
                     <p className="font-semibold capitalize">{d.label} {d.isCurrent && "(Atual)"}</p>
                     <p>Faturamento: <strong>{fmtFull(d.faturamento)}</strong></p>
+                    <p>Vendas: <strong>{d.vendas}</strong></p>
                   </div>
                 );
               }}
@@ -77,10 +82,10 @@ export function AnnualRevenueChart({ payments }: Props) {
             />
             <Bar dataKey="faturamento" radius={[3, 3, 0, 0]}>
               <LabelList
-                dataKey="faturamento"
+                dataKey="vendas"
                 position="top"
-                formatter={(v: number) => v > 0 ? `${(v / 1000).toFixed(1)}k` : ""}
-                style={{ fontSize: 8, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }}
+                formatter={(v: number) => v > 0 ? `${v} vendas` : ""}
+                style={{ fontSize: 10, fill: "hsl(153,100%,30%)", fontWeight: 700 }}
               />
               {chartData.map((entry, i) => (
                 <Cell

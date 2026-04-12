@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
-import type { MPPayment, DateRange } from "@/types/mercadopago";
+import type { MPPayment } from "@/types/mercadopago";
 import type { AdsReportDay } from "@/hooks/useMLAdsReport";
-import { format, eachDayOfInterval, getDaysInMonth, isToday } from "date-fns";
+import { format, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Props {
@@ -28,16 +28,17 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado }: P
       adsCostByDate[ad.date] = (adsCostByDate[ad.date] || 0) + ad.cost;
     });
 
-    const byDay: Record<string, number> = {};
+    const byDay: Record<string, { fat: number; count: number }> = {};
     approved.forEach((p) => {
       const dateStr = (p.date_approved || p.date_created).split("T")[0];
-      byDay[dateStr] = (byDay[dateStr] || 0) + p.transaction_amount;
+      if (!byDay[dateStr]) byDay[dateStr] = { fat: 0, count: 0 };
+      byDay[dateStr].fat += p.transaction_amount;
+      byDay[dateStr].count += 1;
     });
 
     let totalFat = 0;
     let totalAds = 0;
 
-    // Generate all days in month (1 to last day)
     const year = now.getFullYear();
     const month = now.getMonth();
     const currentDay = now.getDate();
@@ -45,7 +46,9 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado }: P
     const data = Array.from({ length: daysInMonth }, (_, i) => {
       const day = i + 1;
       const dateStr = format(new Date(year, month, day), "yyyy-MM-dd");
-      const fat = day <= currentDay ? (byDay[dateStr] || 0) : 0;
+      const dayData = byDay[dateStr];
+      const fat = day <= currentDay ? (dayData?.fat || 0) : 0;
+      const count = day <= currentDay ? (dayData?.count || 0) : 0;
       const ads = day <= currentDay ? (adsCostByDate[dateStr] || 0) : 0;
       totalFat += fat;
       totalAds += ads;
@@ -53,6 +56,7 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado }: P
       return {
         day: String(day),
         faturamento: fat,
+        vendas: count,
         isFuture: day > currentDay,
         isToday: day === currentDay,
       };
@@ -93,6 +97,7 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado }: P
                   <div className="bg-background border rounded-lg shadow-lg p-2 text-xs">
                     <p className="font-semibold">Dia {d.day} {d.isToday && "(Hoje)"}</p>
                     <p>Faturamento: <strong>{fmtFull(d.faturamento)}</strong></p>
+                    <p>Vendas: <strong>{d.vendas}</strong></p>
                   </div>
                 );
               }}
@@ -100,10 +105,10 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado }: P
             />
             <Bar dataKey="faturamento" radius={[2, 2, 0, 0]}>
               <LabelList
-                dataKey="faturamento"
+                dataKey="vendas"
                 position="top"
-                formatter={(v: number) => v > 0 ? `${(v / 1000).toFixed(v >= 1000 ? 1 : 0)}${v >= 1000 ? 'k' : ''}` : ""}
-                style={{ fontSize: 7, fill: "hsl(var(--muted-foreground))", fontWeight: 600 }}
+                formatter={(v: number) => v > 0 ? `${v}` : ""}
+                style={{ fontSize: 10, fill: "hsl(153,100%,30%)", fontWeight: 700 }}
               />
               {chartData.map((entry, i) => (
                 <Cell
