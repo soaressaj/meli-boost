@@ -62,11 +62,11 @@ export function TodayLiveMetrics({ payments, adsReport, isLoading, adsIgnorado, 
   if (isLoading) {
     return (
       <div className="bg-[hsl(0,0%,10%)] rounded-xl p-5 shadow-lg">
-        <Skeleton className="h-6 w-48 mb-4 bg-white/30" />
-        <Skeleton className="h-16 w-40 mx-auto mb-4 bg-white/30" />
+        <Skeleton className="h-6 w-48 mb-4 bg-white/20" />
+        <Skeleton className="h-16 w-40 mx-auto mb-4 bg-white/20" />
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 bg-white/30" />
+            <Skeleton key={i} className="h-12 bg-white/20" />
           ))}
         </div>
       </div>
@@ -126,7 +126,7 @@ export function TodayLiveMetrics({ payments, adsReport, isLoading, adsIgnorado, 
 
 function MetricBox({ label, value, valueColor = "text-white" }: { label: string; value: string; valueColor?: string }) {
   return (
-    <div className="bg-white/15 backdrop-blur rounded-md p-2 text-center">
+    <div className="bg-white/10 backdrop-blur rounded-md p-2 text-center border border-white/10">
       <p className="text-[10px] font-medium opacity-80 uppercase tracking-wide">{label}</p>
       <p className={`text-sm font-bold ${valueColor}`}>{value}</p>
     </div>
