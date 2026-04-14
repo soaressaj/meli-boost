@@ -94,6 +94,16 @@ export function TodayLiveMetrics({
     return { start: todayStr, end: todayStr };
   }, [period, customFrom, customTo, todayStr]);
 
+  // Always compute today's revenue for the hero display
+  const todayFaturamento = useMemo(() => {
+    return allMonthPayments
+      .filter((p) => {
+        const d = (p.date_approved || p.date_created).split("T")[0];
+        return d === todayStr && p.status === "approved";
+      })
+      .reduce((s, p) => s + p.transaction_amount, 0);
+  }, [allMonthPayments, todayStr]);
+
   const metrics = useMemo(() => {
     const filtered = allMonthPayments.filter((p) => {
       const d = (p.date_approved || p.date_created).split("T")[0];
@@ -105,12 +115,14 @@ export function TodayLiveMetrics({
 
     const faturamento = approved.reduce((s, p) => s + p.transaction_amount, 0);
 
+    // Total a receber = net_received_amount (saldo a liberar do MP)
     const totalAReceber = approved.reduce((s, p) => {
       const net = p.transaction_details?.net_received_amount ??
         (p.transaction_amount - p.fee_details.reduce((fs, f) => fs + f.amount, 0));
       return s + net;
     }, 0);
 
+    // Lucro = total a receber - custo produto - imposto - etiqueta - transporte - embalagem - ads
     let lucro = 0;
     for (const p of approved) {
       const pricing = findPricingForPayment(p, costMap);
@@ -163,6 +175,12 @@ export function TodayLiveMetrics({
         </div>
       </div>
 
+      {/* TODAY hero - always visible */}
+      <div className="bg-[hsl(153,100%,40%)]/20 border-2 border-[hsl(153,100%,40%)]/40 backdrop-blur rounded-lg py-4 text-center">
+        <p className="text-[10px] uppercase tracking-widest opacity-70 mb-1">Faturamento Hoje</p>
+        <p className="text-4xl font-black tracking-tight text-[hsl(153,100%,60%)]">{fmt(todayFaturamento)}</p>
+      </div>
+
       {/* Period filter */}
       <div className="flex gap-1 flex-wrap justify-center">
         {(["hoje", "7d", "15d", "30d", "custom"] as PeriodKey[]).map((key) => (
@@ -190,16 +208,18 @@ export function TodayLiveMetrics({
         </div>
       )}
 
-      {/* Main value */}
-      <div className="bg-[hsl(153,100%,40%)]/20 border border-[hsl(153,100%,40%)]/30 backdrop-blur rounded-lg py-3 text-center">
-        <p className="text-[10px] uppercase tracking-wide opacity-70 mb-1">Faturamento {periodLabels[period]}</p>
-        <p className="text-3xl font-extrabold tracking-tight text-[hsl(153,100%,60%)]">{fmt(metrics.faturamento)}</p>
-      </div>
+      {/* Period stats (when not "hoje", show period faturamento too) */}
+      {period !== "hoje" && (
+        <div className="bg-white/5 border border-white/10 rounded-lg py-2 text-center">
+          <p className="text-[10px] uppercase tracking-wide opacity-70 mb-0.5">Faturamento {periodLabels[period]}</p>
+          <p className="text-xl font-bold text-[hsl(153,100%,60%)]">{fmt(metrics.faturamento)}</p>
+        </div>
+      )}
 
       {/* Row: lucro / total a receber */}
       <div className="grid grid-cols-2 gap-2">
-        <MetricBox label={`Lucro ${periodLabels[period]}`} value={fmt(metrics.lucro)} valueColor="text-green-300" />
-        <MetricBox label="Total a Receber" value={fmt(metrics.totalAReceber)} valueColor="text-green-300" />
+        <MetricBox label={`Lucro ${periodLabels[period]}`} value={fmt(metrics.lucro)} valueColor="text-blue-400" />
+        <MetricBox label="Total a Receber" value={fmt(metrics.totalAReceber)} subtitle="Saldo a liberar" valueColor="text-green-300" />
       </div>
 
       {/* Row: custo / canceladas */}
@@ -227,11 +247,12 @@ export function TodayLiveMetrics({
   );
 }
 
-function MetricBox({ label, value, valueColor = "text-white" }: { label: string; value: string; valueColor?: string }) {
+function MetricBox({ label, value, subtitle, valueColor = "text-white" }: { label: string; value: string; subtitle?: string; valueColor?: string }) {
   return (
     <div className="bg-white/10 backdrop-blur rounded-md p-2 text-center border border-white/10">
       <p className="text-[10px] font-medium opacity-80 uppercase tracking-wide">{label}</p>
       <p className={`text-sm font-bold ${valueColor}`}>{value}</p>
+      {subtitle && <p className="text-[8px] opacity-50 mt-0.5">{subtitle}</p>}
     </div>
   );
 }
