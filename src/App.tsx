@@ -14,6 +14,7 @@ import CustosImpostos from "./pages/app/CustosImpostos";
 import Calculadoras from "./pages/app/Calculadoras";
 import DRE from "./pages/app/DRE";
 import Full from "./pages/app/Full";
+import Fatura from "./pages/app/Fatura";
 import Conta from "./pages/app/Conta";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="custos" element={<CustosImpostos />} />
             <Route path="calculadoras" element={<Calculadoras />} />
             <Route path="dre" element={<DRE />} />
+            <Route path="fatura" element={<Fatura />} />
             <Route path="conta" element={<Conta />} />
           </Route>
           <Route path="*" element={<NotFound />} />
