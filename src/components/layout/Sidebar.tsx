@@ -33,6 +33,7 @@ const navItems = [
   { title: "Custos & Impostos", url: "/app/custos", icon: DollarSign },
   { title: "Calculadoras", url: "/app/calculadoras", icon: Calculator },
   { title: "DRE", url: "/app/dre", icon: TrendingUp },
+  { title: "Fatura", url: "/app/fatura", icon: DollarSign },
 ];
 
 const footerItems = [

@@ -71,6 +71,7 @@ export default function VendasAoVivo() {
               payments={monthPayments}
               adsReport={adsReport}
               adsIgnorado={adsIgnorado}
+              listingPricings={listingPricings}
             />
           </div>
           <div className="flex-1 min-h-[280px]">
