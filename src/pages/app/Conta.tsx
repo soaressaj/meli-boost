@@ -3,11 +3,12 @@ import { useMPConnection } from "@/hooks/useMPPayments";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Link2, Link2Off, RefreshCw, CreditCard } from "lucide-react";
+import { User, Link2, Link2Off, RefreshCw, CreditCard, Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 const ML_CLIENT_ID = import.meta.env.VITE_MP_CLIENT_ID || "2782263727604284";
 const ML_REDIRECT_URI = import.meta.env.VITE_MP_REDIRECT_URI || `${window.location.origin}/callback`;
@@ -17,6 +18,19 @@ export default function Conta() {
   const { data: connection } = useMPConnection(user?.id) as { data: { nickname: string | null; mp_user_id: number; expires_at: string } | null | undefined };
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isSupported, isSubscribed, permission, subscribe, unsubscribe } = usePushSubscription(user?.id);
+
+  const handleTogglePush = async () => {
+    if (isSubscribed) {
+      await unsubscribe();
+      toast.success("Notificações desativadas");
+    } else {
+      const ok = await subscribe();
+      if (ok) toast.success("Notificações ativadas! 🔔");
+      else if (permission === "denied") toast.error("Permissão de notificações bloqueada no navegador");
+      else toast.error("Erro ao ativar notificações");
+    }
+  };
 
   const handleReconnect = () => {
     const url = `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${ML_CLIENT_ID}&redirect_uri=${encodeURIComponent(ML_REDIRECT_URI)}`;
@@ -87,6 +101,36 @@ export default function Conta() {
         <p className="text-sm text-muted-foreground">
           Em breve teremos planos com funcionalidades avançadas.
         </p>
+      </div>
+
+      {/* Push Notifications */}
+      <div className="bg-card rounded-lg border shadow-sm p-6 space-y-3">
+        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Bell className="h-5 w-5" /> Notificações Push
+        </h2>
+        {isSupported ? (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Receba alertas instantâneos no celular quando uma venda for aprovada.
+            </p>
+            <Button
+              variant={isSubscribed ? "destructive" : "default"}
+              size="sm"
+              onClick={handleTogglePush}
+              className="gap-1"
+            >
+              {isSubscribed ? <BellOff className="h-3 w-3" /> : <Bell className="h-3 w-3" />}
+              {isSubscribed ? "Desativar notificações" : "Ativar notificações"}
+            </Button>
+            {isSubscribed && (
+              <p className="text-xs text-success">✅ Notificações ativas</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Notificações push não são suportadas neste navegador. Use Chrome, Edge ou Firefox.
+          </p>
+        )}
       </div>
     </div>
   );

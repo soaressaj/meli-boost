@@ -151,6 +151,33 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Payment ${resourceId} saved for user ${conn.user_id}`);
+
+      // Send push notification for approved payments
+      if (payment.status === "approved") {
+        try {
+          const amount = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(payment.transaction_amount);
+          const pushRes = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({
+                user_id: conn.user_id,
+                title: "💰 Nova venda aprovada!",
+                body: `${payment.description || "Venda"} — ${amount}`,
+                url: "/app/vendas",
+              }),
+            }
+          );
+          console.log("Push notification result:", pushRes.status);
+        } catch (pushErr) {
+          console.error("Push notification error:", (pushErr as Error).message);
+        }
+      }
+
       return new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
