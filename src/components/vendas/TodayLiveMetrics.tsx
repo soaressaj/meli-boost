@@ -141,7 +141,7 @@ export function TodayLiveMetrics({
     return {
       faturamento,
       lucro,
-      totalAReceber,
+      totalALiberar,
       custo,
       vendas: approved.length,
       canceladas: cancelled.length,
@@ -221,7 +221,7 @@ export function TodayLiveMetrics({
       {/* Row: lucro / total a receber */}
       <div className="grid grid-cols-2 gap-2">
         <MetricBox label={`Lucro ${periodLabels[period]}`} value={fmt(metrics.lucro)} valueColor="text-blue-400" />
-        <MetricBox label="Total a Receber" value={fmt(metrics.totalAReceber)} subtitle="Saldo a liberar" valueColor="text-green-300" />
+        <MetricBox label="Total a Liberar" value={fmt(metrics.totalALiberar)} subtitle="Saldo pendente" valueColor="text-green-300" />
       </div>
 
       {/* Row: custo / canceladas */}
