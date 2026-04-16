@@ -115,12 +115,14 @@ export function TodayLiveMetrics({
 
     const faturamento = approved.reduce((s, p) => s + p.transaction_amount, 0);
 
-    // Total a receber = net_received_amount (saldo a liberar do MP)
-    const totalAReceber = approved.reduce((s, p) => {
-      const net = p.transaction_details?.net_received_amount ??
-        (p.transaction_amount - p.fee_details.reduce((fs, f) => fs + f.amount, 0));
-      return s + net;
-    }, 0);
+    // Total a liberar = net de vendas aprovadas ainda não liberadas (de TODOS os pagamentos, não filtrado por período)
+    const totalALiberar = allMonthPayments
+      .filter((p) => p.status === "approved" && p.money_release_status !== "released")
+      .reduce((s, p) => {
+        const net = p.transaction_details?.net_received_amount ??
+          (p.transaction_amount - p.fee_details.reduce((fs, f) => fs + f.amount, 0));
+        return s + net;
+      }, 0);
 
     // Lucro = total a receber - custo produto - imposto - etiqueta - transporte - embalagem - ads
     let lucro = 0;

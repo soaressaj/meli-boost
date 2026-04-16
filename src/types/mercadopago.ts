@@ -17,6 +17,7 @@ export interface MPPayment {
   };
   payer: { id: number; email: string };
   description?: string;
+  money_release_status?: string;
 }
 
 export interface MPSearchResponse {
