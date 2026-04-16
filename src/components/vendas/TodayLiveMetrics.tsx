@@ -115,12 +115,14 @@ export function TodayLiveMetrics({
 
     const faturamento = approved.reduce((s, p) => s + p.transaction_amount, 0);
 
-    // Total a receber = net_received_amount (saldo a liberar do MP)
-    const totalAReceber = approved.reduce((s, p) => {
-      const net = p.transaction_details?.net_received_amount ??
-        (p.transaction_amount - p.fee_details.reduce((fs, f) => fs + f.amount, 0));
-      return s + net;
-    }, 0);
+    // Total a liberar = net de vendas aprovadas ainda não liberadas (de TODOS os pagamentos, não filtrado por período)
+    const totalALiberar = allMonthPayments
+      .filter((p) => p.status === "approved" && p.money_release_status !== "released")
+      .reduce((s, p) => {
+        const net = p.transaction_details?.net_received_amount ??
+          (p.transaction_amount - p.fee_details.reduce((fs, f) => fs + f.amount, 0));
+        return s + net;
+      }, 0);
 
     // Lucro = total a receber - custo produto - imposto - etiqueta - transporte - embalagem - ads
     let lucro = 0;
@@ -139,7 +141,7 @@ export function TodayLiveMetrics({
     return {
       faturamento,
       lucro,
-      totalAReceber,
+      totalALiberar,
       custo,
       vendas: approved.length,
       canceladas: cancelled.length,
@@ -219,7 +221,7 @@ export function TodayLiveMetrics({
       {/* Row: lucro / total a receber */}
       <div className="grid grid-cols-2 gap-2">
         <MetricBox label={`Lucro ${periodLabels[period]}`} value={fmt(metrics.lucro)} valueColor="text-blue-400" />
-        <MetricBox label="Total a Receber" value={fmt(metrics.totalAReceber)} subtitle="Saldo a liberar" valueColor="text-green-300" />
+        <MetricBox label="Total a Liberar" value={fmt(metrics.totalALiberar)} subtitle="Saldo pendente" valueColor="text-green-300" />
       </div>
 
       {/* Row: custo / canceladas */}
