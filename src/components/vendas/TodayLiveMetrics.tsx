@@ -235,9 +235,28 @@ export function TodayLiveMetrics({
         </div>
       )}
 
-      {/* Row: lucro / total a receber */}
+      {/* Row: lucro / total a liberar */}
       <div className="grid grid-cols-2 gap-2">
-        <MetricBox label={`Lucro ${periodLabels[period]}`} value={fmt(metrics.lucro)} valueColor="text-blue-400" />
+        <div className="bg-white/10 backdrop-blur rounded-md p-2 text-center border border-white/10 relative">
+          <p className="text-[10px] font-medium opacity-80 uppercase tracking-wide">
+            Lucro {periodLabels[period]}
+          </p>
+          <p className="text-sm font-bold text-blue-400">
+            {fmt(lucroDescontaAds ? metrics.lucroBruto - metrics.gastoAds : metrics.lucroBruto)}
+          </p>
+          <button
+            type="button"
+            onClick={() => setLucroDescontaAds((v) => !v)}
+            className={`mt-1 text-[8px] px-1.5 py-0.5 rounded-full border transition-colors ${
+              lucroDescontaAds
+                ? "bg-pink-500/30 border-pink-400/60 text-pink-200"
+                : "bg-white/5 border-white/20 text-white/60"
+            }`}
+            title={lucroDescontaAds ? `Descontando ${fmt(metrics.gastoAds)} de Ads` : "Clique para abater Ads"}
+          >
+            {lucroDescontaAds ? `− Ads (${fmt(metrics.gastoAds)})` : "+ Abater Ads"}
+          </button>
+        </div>
         <MetricBox label="Total a Liberar" value={fmt(metrics.totalALiberar)} subtitle="Saldo pendente" valueColor="text-green-300" />
       </div>
 
