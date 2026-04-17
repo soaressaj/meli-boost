@@ -35,6 +35,7 @@ export default function VendasAoVivo() {
 
   const { settings, saveSettings } = useUserSettings(user?.id);
   const { data: listingPricings = [] } = useListingPricings(user?.id);
+  const { data: activeItems = [] } = useMLActiveItems(!!user?.id);
 
   const dateFrom = monthStart.toISOString().split("T")[0];
   const dateTo = monthEnd.toISOString().split("T")[0];
@@ -77,6 +78,11 @@ export default function VendasAoVivo() {
               listingPricings={listingPricings}
             />
           </div>
+          <TopSellingProducts
+            payments={monthPayments}
+            listingPricings={listingPricings}
+            activeItems={activeItems}
+          />
           <div className="flex-1 min-h-[280px]">
             <AnnualRevenueChart payments={annualPayments} />
           </div>
