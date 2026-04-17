@@ -4,10 +4,12 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { useRealtimePayments } from "@/hooks/useRealtimePayments";
 import { useMLAdsReport } from "@/hooks/useMLAdsReport";
 import { useMLVisitsReport } from "@/hooks/useMLVisitsReport";
+import { useMLActiveItems } from "@/hooks/useMLActiveItems";
 import { useListingPricings } from "@/hooks/useListingPricing";
 import { TodayLiveMetrics } from "@/components/vendas/TodayLiveMetrics";
 import { MonthlyRevenueChart } from "@/components/vendas/MonthlyRevenueChart";
 import { AnnualRevenueChart } from "@/components/vendas/AnnualRevenueChart";
+import { TopSellingProducts } from "@/components/vendas/TopSellingProducts";
 import { AdsSection } from "@/components/vendas/AdsSection";
 import { SalesTable } from "@/components/vendas/SalesTable";
 import { subMonths, format } from "date-fns";
@@ -33,6 +35,7 @@ export default function VendasAoVivo() {
 
   const { settings, saveSettings } = useUserSettings(user?.id);
   const { data: listingPricings = [] } = useListingPricings(user?.id);
+  const { data: activeItems = [] } = useMLActiveItems(!!user?.id);
 
   const dateFrom = monthStart.toISOString().split("T")[0];
   const dateTo = monthEnd.toISOString().split("T")[0];
@@ -75,6 +78,11 @@ export default function VendasAoVivo() {
               listingPricings={listingPricings}
             />
           </div>
+          <TopSellingProducts
+            payments={monthPayments}
+            listingPricings={listingPricings}
+            activeItems={activeItems}
+          />
           <div className="flex-1 min-h-[280px]">
             <AnnualRevenueChart payments={annualPayments} />
           </div>
