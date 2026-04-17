@@ -79,7 +79,7 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
       const isFuture = day > currentDay;
 
       if (isFuture) {
-        return { day: String(day), faturamento: 0, lucro: 0, custoML: 0, ads: 0, afiliados: 0, vendas: 0, isFuture: true };
+        return { day: String(day), faturamento: 0, lucro: 0, custoML: 0, custosProduto: 0, ads: 0, afiliados: 0, vendas: 0, isFuture: true };
       }
 
       const fat = dayPayments.reduce((s, p) => s + p.transaction_amount, 0);
@@ -115,14 +115,20 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
       const adsDay = adsCostByDate[dateStr] || 0;
       const custoML = totalFees;
       const custosProduto = totalCustoProduto + totalEmbalagem + totalTransporte + totalEtiqueta + totalImposto;
-      const lucro = fat - custoML - custosProduto - totalAfiliados - (adsIgnorado ? 0 : adsDay);
+      const adsValue = adsIgnorado ? 0 : adsDay;
+      const lucroRaw = fat - custoML - custosProduto - totalAfiliados - adsValue;
+      // Garantir que as fatias somem ao faturamento (proporções corretas).
+      // Se lucro negativo, zera lucro e mostra o "déficit" como custo extra para manter altura = faturamento.
+      const lucro = Math.max(lucroRaw, 0);
+      const ajusteCusto = lucroRaw < 0 ? -lucroRaw : 0;
 
       return {
         day: String(day),
         faturamento: fat,
-        lucro: Math.max(lucro, 0),
+        lucro,
         custoML,
-        ads: adsIgnorado ? 0 : adsDay,
+        custosProduto: custosProduto + ajusteCusto,
+        ads: adsValue,
         afiliados: totalAfiliados,
         vendas: count,
         isFuture: false,
