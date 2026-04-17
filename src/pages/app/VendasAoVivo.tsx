@@ -16,8 +16,9 @@ export default function VendasAoVivo() {
   const { user } = useAuth();
   const now = new Date();
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  // Fim = fim do dia de hoje (23:59:59) para garantir todos os pagamentos do dia
+  const monthEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   const annualStart = subMonths(new Date(now.getFullYear(), now.getMonth(), 1), 11);
 
   const { data: monthPayments = [], isLoading } = useMPPayments(
