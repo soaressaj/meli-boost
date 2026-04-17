@@ -44,15 +44,28 @@ function findPricingForPayment(payment: MPPayment, costMap: Record<string, Listi
   return undefined;
 }
 
+function getPaymentQuantity(payment: MPPayment): number {
+  const items = payment.additional_info?.items;
+  if (items && items.length > 0) {
+    const total = items.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+    if (total > 0) return total;
+  }
+  return 1;
+}
+
 function calcPaymentProfit(payment: MPPayment, pricing: ListingPricing | undefined) {
   const amount = payment.transaction_amount;
   const fees = payment.fee_details.reduce((s, f) => s + f.amount, 0);
   if (!pricing) return amount - fees;
 
-  const custoProduto = pricing.custo_produto || 0;
-  const embalagem = pricing.embalagem || 0;
-  const transporte = pricing.transporte || 0;
-  const etiqueta = pricing.etiqueta || 0;
+  const qty = getPaymentQuantity(payment);
+  // qtd_kit = quantas unidades vão dentro de cada "venda/kit". Custo é por unidade física.
+  const unidadesFisicas = qty * (pricing.qtd_kit || 1);
+
+  const custoProduto = (pricing.custo_produto || 0) * unidadesFisicas;
+  const embalagem = (pricing.embalagem || 0) * qty;
+  const transporte = (pricing.transporte || 0) * qty;
+  const etiqueta = (pricing.etiqueta || 0) * qty;
   const bonusAfiliados = amount * ((pricing.bonus_afiliados || 0) / 100);
   const icmsDif = amount * ((pricing.diferenca_icms || 0) / 100);
 
