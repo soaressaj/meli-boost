@@ -36,6 +36,15 @@ function findPricing(payment: MPPayment, costMap: Record<string, ListingPricing>
   return undefined;
 }
 
+function getQty(p: MPPayment): number {
+  const items = p.additional_info?.items;
+  if (items && items.length > 0) {
+    const t = items.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+    if (t > 0) return t;
+  }
+  return 1;
+}
+
 export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, listingPricings = [] }: Props) {
   const now = new Date();
   const monthName = format(now, "MMMM", { locale: ptBR });
@@ -77,7 +86,7 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
       totalFat += fat;
       const count = dayPayments.length;
 
-      // Calculate cost breakdown
+      // Calculate cost breakdown (per unidade)
       let totalFees = 0;
       let totalCustoProduto = 0;
       let totalImposto = 0;
@@ -92,17 +101,19 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
 
         const pricing = findPricing(p, costMap);
         if (pricing) {
-          totalCustoProduto += pricing.custo_produto || 0;
-          totalEmbalagem += pricing.embalagem || 0;
-          totalTransporte += pricing.transporte || 0;
-          totalEtiqueta += pricing.etiqueta || 0;
+          const qty = getQty(p);
+          const unidades = qty * (pricing.qtd_kit || 1);
+          totalCustoProduto += (pricing.custo_produto || 0) * unidades;
+          totalEmbalagem += (pricing.embalagem || 0) * qty;
+          totalTransporte += (pricing.transporte || 0) * qty;
+          totalEtiqueta += (pricing.etiqueta || 0) * qty;
           totalAfiliados += p.transaction_amount * ((pricing.bonus_afiliados || 0) / 100);
           totalImposto += p.transaction_amount * ((pricing.diferenca_icms || 0) / 100);
         }
       }
 
       const adsDay = adsCostByDate[dateStr] || 0;
-      const custoML = totalFees; // taxas ML (comissão + frete cobrado)
+      const custoML = totalFees;
       const custosProduto = totalCustoProduto + totalEmbalagem + totalTransporte + totalEtiqueta + totalImposto;
       const lucro = fat - custoML - custosProduto - totalAfiliados - (adsIgnorado ? 0 : adsDay);
 
@@ -121,6 +132,12 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
     return { chartData: data, totalFat };
   }, [payments, adsReport, adsIgnorado, daysInMonth, costMap, now]);
 
+  const fmtCompact = (v: number) => {
+    if (v <= 0) return "";
+    if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
+    return v.toFixed(0);
+  };
+
   return (
     <div className="bg-card rounded-xl border shadow-sm p-4 space-y-3 h-full flex flex-col">
       <div className="flex items-center justify-between">
@@ -136,18 +153,50 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#eab308]" /> Custo ML</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#ec4899]" /> Ads</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f97316]" /> Afiliados</span>
+        <span className="flex items-center gap-1 ml-auto text-muted-foreground">
+          <span className="text-green-500 font-semibold">F</span>=Faturamento ·
+          <span className="text-blue-500 font-semibold ml-1">L</span>=Lucro
+        </span>
       </div>
 
-      <div className="flex-1 min-h-[200px]">
+      <div className="flex-1 min-h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} barCategoryGap="15%" stackOffset="none">
+          <BarChart data={chartData} barCategoryGap="15%" stackOffset="none" margin={{ top: 24, right: 4, bottom: 28, left: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="day"
-              tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+              tick={(props) => {
+                const { x, y, payload, index } = props;
+                const d = chartData[index];
+                if (!d || d.isFuture) {
+                  return (
+                    <text x={x} y={y + 12} textAnchor="middle" fontSize={9} fill="hsl(var(--muted-foreground))" opacity={0.4}>
+                      {payload.value}
+                    </text>
+                  );
+                }
+                return (
+                  <g transform={`translate(${x},${y})`}>
+                    <text y={10} textAnchor="middle" fontSize={9} fill="hsl(var(--muted-foreground))" fontWeight={600}>
+                      {payload.value}
+                    </text>
+                    {d.faturamento > 0 && (
+                      <text y={22} textAnchor="middle" fontSize={8} fill="hsl(142, 71%, 45%)" fontWeight={700}>
+                        F:{fmtCompact(d.faturamento)}
+                      </text>
+                    )}
+                    {d.lucro > 0 && (
+                      <text y={32} textAnchor="middle" fontSize={8} fill="hsl(217, 91%, 60%)" fontWeight={700}>
+                        L:{fmtCompact(d.lucro)}
+                      </text>
+                    )}
+                  </g>
+                );
+              }}
               axisLine={false}
               tickLine={false}
               interval={0}
+              height={42}
             />
             <YAxis hide />
             <Tooltip
@@ -159,7 +208,7 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
                   <div className="bg-background border rounded-lg shadow-lg p-2.5 text-xs space-y-1">
                     <p className="font-semibold">Dia {d.day}</p>
                     <p>Faturamento: <strong className="text-green-400">{fmtFull(d.faturamento)}</strong></p>
-                    <p>Lucro: <strong className="text-blue-400">{fmtFull(d.lucro)}</strong></p>
+                    <p>Lucro {adsIgnorado ? "(s/ ads)" : "(c/ ads)"}: <strong className="text-blue-400">{fmtFull(d.lucro)}</strong></p>
                     <p>Custo ML: <strong className="text-yellow-400">{fmtFull(d.custoML)}</strong></p>
                     <p>Ads: <strong className="text-pink-400">{fmtFull(d.ads)}</strong></p>
                     <p>Afiliados: <strong className="text-orange-400">{fmtFull(d.afiliados)}</strong></p>
@@ -169,7 +218,6 @@ export function MonthlyRevenueChart({ payments, adsReport = [], adsIgnorado, lis
               }}
               cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
             />
-            {/* Stacked bars: bottom to top = lucro, custoML, ads, afiliados */}
             <Bar dataKey="lucro" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
             <Bar dataKey="custoML" stackId="a" fill="#eab308" radius={[0, 0, 0, 0]} />
             <Bar dataKey="ads" stackId="a" fill="#ec4899" radius={[0, 0, 0, 0]} />

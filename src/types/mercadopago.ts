@@ -18,6 +18,9 @@ export interface MPPayment {
   payer: { id: number; email: string };
   description?: string;
   money_release_status?: string;
+  additional_info?: {
+    items?: Array<{ id?: string; title?: string; quantity?: string | number; unit_price?: string | number; category_id?: string }>;
+  };
 }
 
 export interface MPSearchResponse {

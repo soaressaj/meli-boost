@@ -44,15 +44,28 @@ function findPricingForPayment(payment: MPPayment, costMap: Record<string, Listi
   return undefined;
 }
 
+function getPaymentQuantity(payment: MPPayment): number {
+  const items = payment.additional_info?.items;
+  if (items && items.length > 0) {
+    const total = items.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+    if (total > 0) return total;
+  }
+  return 1;
+}
+
 function calcPaymentProfit(payment: MPPayment, pricing: ListingPricing | undefined) {
   const amount = payment.transaction_amount;
   const fees = payment.fee_details.reduce((s, f) => s + f.amount, 0);
   if (!pricing) return amount - fees;
 
-  const custoProduto = pricing.custo_produto || 0;
-  const embalagem = pricing.embalagem || 0;
-  const transporte = pricing.transporte || 0;
-  const etiqueta = pricing.etiqueta || 0;
+  const qty = getPaymentQuantity(payment);
+  // qtd_kit = quantas unidades vão dentro de cada "venda/kit". Custo é por unidade física.
+  const unidadesFisicas = qty * (pricing.qtd_kit || 1);
+
+  const custoProduto = (pricing.custo_produto || 0) * unidadesFisicas;
+  const embalagem = (pricing.embalagem || 0) * qty;
+  const transporte = (pricing.transporte || 0) * qty;
+  const etiqueta = (pricing.etiqueta || 0) * qty;
   const bonusAfiliados = amount * ((pricing.bonus_afiliados || 0) / 100);
   const icmsDif = amount * ((pricing.diferenca_icms || 0) / 100);
 
@@ -81,6 +94,7 @@ export function TodayLiveMetrics({
   const [period, setPeriod] = useState<PeriodKey>("hoje");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [lucroDescontaAds, setLucroDescontaAds] = useState(false);
 
   const costMap = useMemo(() => buildCostMap(listingPricings), [listingPricings]);
 
@@ -124,23 +138,26 @@ export function TodayLiveMetrics({
         return s + net;
       }, 0);
 
-    // Lucro = total a receber - custo produto - imposto - etiqueta - transporte - embalagem - ads
-    let lucro = 0;
+    // Lucro bruto (sem descontar ads) = faturamento - tarifas MP/ML - custos do produto/embalagem/etc
+    let lucroBruto = 0;
     for (const p of approved) {
       const pricing = findPricingForPayment(p, costMap);
-      lucro += calcPaymentProfit(p, pricing);
+      lucroBruto += calcPaymentProfit(p, pricing);
     }
 
     const periodAds = adsReport
       .filter((a) => a.date >= periodRange.start && a.date <= periodRange.end)
       .reduce((s, a) => s + a.cost, 0);
-    if (!adsIgnorado) lucro -= periodAds;
 
+    const gastoAds = adsIgnorado ? 0 : periodAds;
+    const lucro = lucroBruto - gastoAds;
     const custo = faturamento - lucro;
 
     return {
       faturamento,
       lucro,
+      lucroBruto,
+      gastoAds,
       totalALiberar,
       custo,
       vendas: approved.length,
@@ -218,9 +235,28 @@ export function TodayLiveMetrics({
         </div>
       )}
 
-      {/* Row: lucro / total a receber */}
+      {/* Row: lucro / total a liberar */}
       <div className="grid grid-cols-2 gap-2">
-        <MetricBox label={`Lucro ${periodLabels[period]}`} value={fmt(metrics.lucro)} valueColor="text-blue-400" />
+        <div className="bg-white/10 backdrop-blur rounded-md p-2 text-center border border-white/10 relative">
+          <p className="text-[10px] font-medium opacity-80 uppercase tracking-wide">
+            Lucro {periodLabels[period]}
+          </p>
+          <p className="text-sm font-bold text-blue-400">
+            {fmt(lucroDescontaAds ? metrics.lucroBruto - metrics.gastoAds : metrics.lucroBruto)}
+          </p>
+          <button
+            type="button"
+            onClick={() => setLucroDescontaAds((v) => !v)}
+            className={`mt-1 text-[8px] px-1.5 py-0.5 rounded-full border transition-colors ${
+              lucroDescontaAds
+                ? "bg-pink-500/30 border-pink-400/60 text-pink-200"
+                : "bg-white/5 border-white/20 text-white/60"
+            }`}
+            title={lucroDescontaAds ? `Descontando ${fmt(metrics.gastoAds)} de Ads` : "Clique para abater Ads"}
+          >
+            {lucroDescontaAds ? `− Ads (${fmt(metrics.gastoAds)})` : "+ Abater Ads"}
+          </button>
+        </div>
         <MetricBox label="Total a Liberar" value={fmt(metrics.totalALiberar)} subtitle="Saldo pendente" valueColor="text-green-300" />
       </div>
 
