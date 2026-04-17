@@ -94,6 +94,7 @@ export function TodayLiveMetrics({
   const [period, setPeriod] = useState<PeriodKey>("hoje");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [lucroDescontaAds, setLucroDescontaAds] = useState(false);
 
   const costMap = useMemo(() => buildCostMap(listingPricings), [listingPricings]);
 
