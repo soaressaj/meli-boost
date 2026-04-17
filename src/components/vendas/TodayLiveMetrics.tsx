@@ -138,23 +138,26 @@ export function TodayLiveMetrics({
         return s + net;
       }, 0);
 
-    // Lucro = total a receber - custo produto - imposto - etiqueta - transporte - embalagem - ads
-    let lucro = 0;
+    // Lucro bruto (sem descontar ads) = faturamento - tarifas MP/ML - custos do produto/embalagem/etc
+    let lucroBruto = 0;
     for (const p of approved) {
       const pricing = findPricingForPayment(p, costMap);
-      lucro += calcPaymentProfit(p, pricing);
+      lucroBruto += calcPaymentProfit(p, pricing);
     }
 
     const periodAds = adsReport
       .filter((a) => a.date >= periodRange.start && a.date <= periodRange.end)
       .reduce((s, a) => s + a.cost, 0);
-    if (!adsIgnorado) lucro -= periodAds;
 
+    const gastoAds = adsIgnorado ? 0 : periodAds;
+    const lucro = lucroBruto - gastoAds;
     const custo = faturamento - lucro;
 
     return {
       faturamento,
       lucro,
+      lucroBruto,
+      gastoAds,
       totalALiberar,
       custo,
       vendas: approved.length,
