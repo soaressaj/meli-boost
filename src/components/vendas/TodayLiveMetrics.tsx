@@ -8,6 +8,14 @@ import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  buildPricingMaps,
+  calcListingUnitProfit,
+  getPaymentDateKey,
+  getPaymentItems,
+  resolvePricing,
+  toLocalDateKey,
+} from "@/lib/vendas-metrics";
 
 type PeriodKey = "hoje" | "7d" | "15d" | "30d" | "custom";
 
@@ -23,66 +31,6 @@ interface Props {
 
 function fmt(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
-}
-
-function buildCostMap(pricings: ListingPricing[]) {
-  const byId: Record<string, ListingPricing> = {};
-  const byTitle: Record<string, ListingPricing> = {};
-  for (const lp of pricings) {
-    if (lp.ml_item_id) byId[lp.ml_item_id] = lp;
-    if (lp.title) byTitle[lp.title.toLowerCase()] = lp;
-  }
-  return { byId, byTitle };
-}
-
-function findPricingForPayment(
-  payment: MPPayment,
-  costMap: { byId: Record<string, ListingPricing>; byTitle: Record<string, ListingPricing> }
-): ListingPricing | undefined {
-  // 1) Match preferencial por ml_item_id
-  const itemId = payment.additional_info?.items?.[0]?.id;
-  if (itemId && costMap.byId[itemId]) return costMap.byId[itemId];
-
-  // 2) Match por título dos items do pedido
-  const itemTitle = payment.additional_info?.items?.[0]?.title?.toLowerCase();
-  if (itemTitle && costMap.byTitle[itemTitle]) return costMap.byTitle[itemTitle];
-
-  // 3) Fallback: busca por description (substring)
-  const desc = payment.description?.toLowerCase();
-  if (desc) {
-    for (const key of Object.keys(costMap.byTitle)) {
-      if (desc.includes(key) || key.includes(desc)) return costMap.byTitle[key];
-    }
-  }
-  return undefined;
-}
-
-function getPaymentQuantity(payment: MPPayment): number {
-  const items = payment.additional_info?.items;
-  if (items && items.length > 0) {
-    const total = items.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
-    if (total > 0) return total;
-  }
-  return 1;
-}
-
-function calcPaymentProfit(payment: MPPayment, pricing: ListingPricing | undefined) {
-  const amount = payment.transaction_amount;
-  const fees = payment.fee_details.reduce((s, f) => s + f.amount, 0);
-  if (!pricing) return amount - fees;
-
-  const qty = getPaymentQuantity(payment);
-  // qtd_kit = quantas unidades vão dentro de cada "venda/kit". Custo é por unidade física.
-  const unidadesFisicas = qty * (pricing.qtd_kit || 1);
-
-  const custoProduto = (pricing.custo_produto || 0) * unidadesFisicas;
-  const embalagem = (pricing.embalagem || 0) * qty;
-  const transporte = (pricing.transporte || 0) * qty;
-  const etiqueta = (pricing.etiqueta || 0) * qty;
-  const bonusAfiliados = amount * ((pricing.bonus_afiliados || 0) / 100);
-  const icmsDif = amount * ((pricing.diferenca_icms || 0) / 100);
-
-  return amount - fees - custoProduto - embalagem - transporte - etiqueta - bonusAfiliados - icmsDif;
 }
 
 const periodLabels: Record<PeriodKey, string> = {
@@ -103,13 +51,13 @@ export function TodayLiveMetrics({
   listingPricings = [],
 }: Props) {
   const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = toLocalDateKey(now);
   const [period, setPeriod] = useState<PeriodKey>("hoje");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
-  const [lucroDescontaAds, setLucroDescontaAds] = useState(false);
+  const [lucroDescontaAds, setLucroDescontaAds] = useState(true);
 
-  const costMap = useMemo(() => buildCostMap(listingPricings), [listingPricings]);
+  const costMap = useMemo(() => buildPricingMaps(listingPricings), [listingPricings]);
 
   const periodRange = useMemo(() => {
     const end = now;
@@ -125,7 +73,7 @@ export function TodayLiveMetrics({
   const todayFaturamento = useMemo(() => {
     return allMonthPayments
       .filter((p) => {
-        const d = (p.date_approved || p.date_created).split("T")[0];
+        const d = getPaymentDateKey(p);
         return d === todayStr && p.status === "approved";
       })
       .reduce((s, p) => s + p.transaction_amount, 0);
@@ -133,7 +81,7 @@ export function TodayLiveMetrics({
 
   const metrics = useMemo(() => {
     const filtered = allMonthPayments.filter((p) => {
-      const d = (p.date_approved || p.date_created).split("T")[0];
+      const d = getPaymentDateKey(p);
       return d >= periodRange.start && d <= periodRange.end;
     });
 
@@ -153,9 +101,22 @@ export function TodayLiveMetrics({
 
     // Lucro bruto (sem descontar ads) = faturamento - tarifas MP/ML - custos do produto/embalagem/etc
     let lucroBruto = 0;
-    for (const p of approved) {
-      const pricing = findPricingForPayment(p, costMap);
-      lucroBruto += calcPaymentProfit(p, pricing);
+    for (const payment of approved) {
+      const items = getPaymentItems(payment);
+      let matchedItem = false;
+
+      for (const item of items) {
+        const pricing = resolvePricing(item, costMap);
+        if (!pricing) continue;
+
+        matchedItem = true;
+        lucroBruto += calcListingUnitProfit(pricing) * item.quantity;
+      }
+
+      if (!matchedItem) {
+        const fees = payment.fee_details.reduce((s, f) => s + f.amount, 0);
+        lucroBruto += payment.transaction_amount - fees;
+      }
     }
 
     const periodAds = adsReport

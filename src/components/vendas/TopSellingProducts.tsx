@@ -3,6 +3,16 @@ import type { MPPayment } from "@/types/mercadopago";
 import type { ListingPricing } from "@/hooks/useListingPricing";
 import type { MLItem } from "@/hooks/useMLActiveItems";
 import type { AdsReportDay } from "@/hooks/useMLAdsReport";
+import {
+  buildActiveItemMaps,
+  buildPricingMaps,
+  getPaymentDateKey,
+  getPaymentItems,
+  normalizeText,
+  resolveActiveItem,
+  resolvePricing,
+  toLocalDateKey,
+} from "@/lib/vendas-metrics";
 
 interface Props {
   payments: MPPayment[];
@@ -28,31 +38,8 @@ function fmt(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 
-function getQty(p: MPPayment): number {
-  const items = p.additional_info?.items;
-  if (items && items.length > 0) {
-    const t = items.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
-    if (t > 0) return t;
-  }
-  return 1;
-}
-
-function getItemId(p: MPPayment): string | undefined {
-  const items = p.additional_info?.items;
-  return items?.[0]?.id;
-}
-
-function getItemTitle(p: MPPayment): string {
-  return (
-    p.additional_info?.items?.[0]?.title ||
-    p.description ||
-    "Produto sem título"
-  );
-}
-
 function pickThumbnail(url: string | null | undefined): string | null {
   if (!url) return null;
-  // ML costuma servir https; força https para não bloquear por mixed-content
   return url.replace(/^http:\/\//, "https://");
 }
 
@@ -63,68 +50,61 @@ export function TopSellingProducts({
   adsReport = [],
   limit = 10,
 }: Props) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey(new Date());
 
   const top = useMemo<Aggregated[]>(() => {
-    const pricingByItemId: Record<string, ListingPricing> = {};
-    const pricingByTitle: Record<string, ListingPricing> = {};
-    listingPricings.forEach((p) => {
-      if (p.ml_item_id) pricingByItemId[p.ml_item_id] = p;
-      if (p.title) pricingByTitle[p.title.toLowerCase()] = p;
-    });
-
-    const activeById: Record<string, MLItem> = {};
-    const activeByTitle: Record<string, MLItem> = {};
-    activeItems.forEach((it) => {
-      activeById[it.id] = it;
-      if (it.title) activeByTitle[it.title.toLowerCase()] = it;
-    });
+    const pricingMap = buildPricingMaps(listingPricings);
+    const activeMap = buildActiveItemMaps(activeItems);
 
     const map: Record<string, Aggregated> = {};
     let totalFatHoje = 0;
 
     for (const p of payments) {
       if (p.status !== "approved") continue;
-      const dateStr = (p.date_approved || p.date_created).split("T")[0];
+      const dateStr = getPaymentDateKey(p);
       if (dateStr !== today) continue;
 
-      const itemId = getItemId(p);
-      const rawTitle = getItemTitle(p);
-      const titleKey = rawTitle.toLowerCase();
+      const items = getPaymentItems(p);
+      const paymentQty = items.reduce((sum, item) => sum + item.quantity, 0) || 1;
 
-      // Chave de agregação preferindo itemId, depois título normalizado
-      const key = itemId || titleKey;
-      const qty = getQty(p);
+      for (const item of items) {
+        const pricing = resolvePricing(item, pricingMap);
+        const active = resolveActiveItem(
+          { id: item.id || pricing?.ml_item_id, title: pricing?.title || item.title },
+          activeMap
+        );
 
-      if (!map[key]) {
-        const active =
-          (itemId && activeById[itemId]) ||
-          activeByTitle[titleKey] ||
-          undefined;
-        const pricing =
-          (itemId && pricingByItemId[itemId]) ||
-          pricingByTitle[titleKey] ||
-          undefined;
+        const canonicalId = item.id || pricing?.ml_item_id || active?.id;
+        const canonicalTitle = active?.title || pricing?.title || item.title || "Produto sem título";
+        const key = canonicalId || normalizeText(canonicalTitle);
+        const unitRevenue = item.unitPrice ?? (paymentQty > 0 ? p.transaction_amount / paymentQty : p.transaction_amount);
+        const revenue = unitRevenue * item.quantity;
 
-        map[key] = {
-          key,
-          itemId: itemId || active?.id,
-          title: active?.title || pricing?.title || rawTitle,
-          thumbnail: pickThumbnail(active?.thumbnail || pricing?.thumbnail),
-          faturamento: 0,
-          unidades: 0,
-          pedidos: 0,
-          estoque: active?.available_quantity ?? null,
-          adsGasto: 0,
-        };
+        if (!map[key]) {
+          map[key] = {
+            key,
+            itemId: canonicalId,
+            title: canonicalTitle,
+            thumbnail: pickThumbnail(active?.thumbnail || pricing?.thumbnail),
+            faturamento: 0,
+            unidades: 0,
+            pedidos: 0,
+            estoque: active?.available_quantity ?? null,
+            adsGasto: 0,
+          };
+        }
+
+        map[key].title = canonicalTitle;
+        map[key].itemId = canonicalId;
+        map[key].thumbnail = map[key].thumbnail || pickThumbnail(active?.thumbnail || pricing?.thumbnail);
+        map[key].estoque = active?.available_quantity ?? map[key].estoque;
+        map[key].faturamento += revenue;
+        map[key].unidades += item.quantity;
+        map[key].pedidos += 1;
+        totalFatHoje += revenue;
       }
-      map[key].faturamento += p.transaction_amount;
-      map[key].unidades += qty;
-      map[key].pedidos += 1;
-      totalFatHoje += p.transaction_amount;
     }
 
-    // Distribui o gasto total de Ads de hoje proporcionalmente ao faturamento de cada produto
     const adsHoje = adsReport
       .filter((a) => a.date === today)
       .reduce((s, a) => s + a.cost, 0);
