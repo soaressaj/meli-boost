@@ -8,6 +8,9 @@ export interface MLItem {
   thumbnail: string;
   category_id: string;
   shipping?: { free_shipping?: boolean; logistic_type?: string };
+  available_quantity?: number;
+  initial_quantity?: number;
+  sold_quantity?: number;
 }
 
 export function useMLActiveItems(enabled: boolean) {

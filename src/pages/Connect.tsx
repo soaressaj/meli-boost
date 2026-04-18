@@ -37,7 +37,7 @@ export default function Connect() {
       <div className="w-full max-w-md text-center space-y-8">
         <div className="flex items-center justify-center gap-2">
           <Zap className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">MetriFlow</h1>
+          <h1 className="text-2xl font-bold text-foreground">Vendedor Super</h1>
         </div>
         <div className="bg-card p-8 rounded-lg shadow-sm border space-y-6">
           <div className="space-y-2">

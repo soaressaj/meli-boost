@@ -1,16 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Zap } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <Zap className="h-10 w-10 text-[hsl(153,100%,45%)]" />
+        <h1 className="text-4xl font-black tracking-tight">Vendedor Super</h1>
+      </div>
+      <p className="text-white/70 mb-8 text-center max-w-md">
+        Sua central de métricas e vendas do Mercado Livre em tempo real.
+      </p>
+      <div className="flex gap-3">
+        <Button asChild className="bg-[hsl(153,100%,40%)] text-black hover:bg-[hsl(153,100%,35%)]">
+          <Link to="/login">Entrar</Link>
+        </Button>
+        <Button asChild variant="outline" className="border-white/30 text-white hover:bg-white/10">
+          <Link to="/register">Criar conta</Link>
+        </Button>
+      </div>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;

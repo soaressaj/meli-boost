@@ -56,7 +56,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <div className="p-4 flex items-center gap-2">
         <Zap className="h-6 w-6 text-sidebar-primary shrink-0" />
-        {!collapsed && <span className="text-lg font-bold text-sidebar-foreground">MetriFlow</span>}
+        {!collapsed && <span className="text-lg font-bold text-sidebar-foreground">Vendedor Super</span>}
       </div>
       <SidebarContent>
         <SidebarGroup>

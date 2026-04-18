@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
       // Fetch item details in batches of 20 (ML multiget limit)
       for (let i = 0; i < itemIds.length; i += 20) {
         const batch = itemIds.slice(i, i + 20);
-        const multigetUrl = `https://api.mercadolibre.com/items?ids=${batch.join(",")}&attributes=id,title,price,thumbnail,status,category_id,shipping`;
+        const multigetUrl = `https://api.mercadolibre.com/items?ids=${batch.join(",")}&attributes=id,title,price,thumbnail,status,category_id,shipping,available_quantity,initial_quantity,sold_quantity`;
         const multigetRes = await fetch(multigetUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -128,6 +128,9 @@ Deno.serve(async (req) => {
                 thumbnail: item.body.thumbnail,
                 category_id: item.body.category_id,
                 shipping: item.body.shipping,
+                available_quantity: item.body.available_quantity ?? 0,
+                initial_quantity: item.body.initial_quantity ?? 0,
+                sold_quantity: item.body.sold_quantity ?? 0,
               });
             }
           }
