@@ -2,22 +2,26 @@ import { useMemo } from "react";
 import type { MPPayment } from "@/types/mercadopago";
 import type { ListingPricing } from "@/hooks/useListingPricing";
 import type { MLItem } from "@/hooks/useMLActiveItems";
+import type { AdsReportDay } from "@/hooks/useMLAdsReport";
 
 interface Props {
   payments: MPPayment[];
   listingPricings?: ListingPricing[];
   activeItems?: MLItem[];
+  adsReport?: AdsReportDay[];
   limit?: number;
 }
 
 interface Aggregated {
   key: string;
+  itemId?: string;
   title: string;
   thumbnail: string | null;
   faturamento: number;
   unidades: number;
   pedidos: number;
   estoque: number | null;
+  adsGasto: number;
 }
 
 function fmt(v: number) {
@@ -46,21 +50,38 @@ function getItemTitle(p: MPPayment): string {
   );
 }
 
-export function TopSellingProducts({ payments, listingPricings = [], activeItems = [], limit = 5 }: Props) {
+function pickThumbnail(url: string | null | undefined): string | null {
+  if (!url) return null;
+  // ML costuma servir https; força https para não bloquear por mixed-content
+  return url.replace(/^http:\/\//, "https://");
+}
+
+export function TopSellingProducts({
+  payments,
+  listingPricings = [],
+  activeItems = [],
+  adsReport = [],
+  limit = 10,
+}: Props) {
   const today = new Date().toISOString().split("T")[0];
 
   const top = useMemo<Aggregated[]>(() => {
     const pricingByItemId: Record<string, ListingPricing> = {};
+    const pricingByTitle: Record<string, ListingPricing> = {};
     listingPricings.forEach((p) => {
       if (p.ml_item_id) pricingByItemId[p.ml_item_id] = p;
+      if (p.title) pricingByTitle[p.title.toLowerCase()] = p;
     });
 
     const activeById: Record<string, MLItem> = {};
+    const activeByTitle: Record<string, MLItem> = {};
     activeItems.forEach((it) => {
       activeById[it.id] = it;
+      if (it.title) activeByTitle[it.title.toLowerCase()] = it;
     });
 
     const map: Record<string, Aggregated> = {};
+    let totalFatHoje = 0;
 
     for (const p of payments) {
       if (p.status !== "approved") continue;
@@ -68,31 +89,56 @@ export function TopSellingProducts({ payments, listingPricings = [], activeItems
       if (dateStr !== today) continue;
 
       const itemId = getItemId(p);
-      const key = itemId || (p.description || "sem-titulo").toLowerCase();
+      const rawTitle = getItemTitle(p);
+      const titleKey = rawTitle.toLowerCase();
+
+      // Chave de agregação preferindo itemId, depois título normalizado
+      const key = itemId || titleKey;
       const qty = getQty(p);
 
       if (!map[key]) {
-        const pricing = itemId ? pricingByItemId[itemId] : undefined;
-        const active = itemId ? activeById[itemId] : undefined;
+        const active =
+          (itemId && activeById[itemId]) ||
+          activeByTitle[titleKey] ||
+          undefined;
+        const pricing =
+          (itemId && pricingByItemId[itemId]) ||
+          pricingByTitle[titleKey] ||
+          undefined;
+
         map[key] = {
           key,
-          title: active?.title || pricing?.title || getItemTitle(p),
-          thumbnail: active?.thumbnail || pricing?.thumbnail || null,
+          itemId: itemId || active?.id,
+          title: active?.title || pricing?.title || rawTitle,
+          thumbnail: pickThumbnail(active?.thumbnail || pricing?.thumbnail),
           faturamento: 0,
           unidades: 0,
           pedidos: 0,
-          estoque: null,
+          estoque: active?.available_quantity ?? null,
+          adsGasto: 0,
         };
       }
       map[key].faturamento += p.transaction_amount;
       map[key].unidades += qty;
       map[key].pedidos += 1;
+      totalFatHoje += p.transaction_amount;
+    }
+
+    // Distribui o gasto total de Ads de hoje proporcionalmente ao faturamento de cada produto
+    const adsHoje = adsReport
+      .filter((a) => a.date === today)
+      .reduce((s, a) => s + a.cost, 0);
+
+    if (totalFatHoje > 0 && adsHoje > 0) {
+      Object.values(map).forEach((p) => {
+        p.adsGasto = (p.faturamento / totalFatHoje) * adsHoje;
+      });
     }
 
     return Object.values(map)
-      .sort((a, b) => b.faturamento - a.faturamento)
+      .sort((a, b) => b.unidades - a.unidades || b.faturamento - a.faturamento)
       .slice(0, limit);
-  }, [payments, listingPricings, activeItems, today, limit]);
+  }, [payments, listingPricings, activeItems, adsReport, today, limit]);
 
   if (top.length === 0) {
     return (
@@ -118,7 +164,16 @@ export function TopSellingProducts({ payments, listingPricings = [], activeItems
           >
             <span className="text-2xl font-black text-foreground/80 w-6 text-center">{idx + 1}</span>
             {p.thumbnail ? (
-              <img src={p.thumbnail} alt={p.title} className="w-12 h-12 object-cover rounded border bg-muted" />
+              <img
+                src={p.thumbnail}
+                alt={p.title}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="w-12 h-12 object-cover rounded border bg-muted"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
             ) : (
               <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center text-muted-foreground text-[10px]">
                 s/img
@@ -133,14 +188,12 @@ export function TopSellingProducts({ payments, listingPricings = [], activeItems
                   Vendas do dia: <strong className="text-foreground">{fmt(p.faturamento)}</strong>
                 </p>
                 <p>
-                  Unidades vendidas: <strong className="text-foreground">{p.unidades}</strong>
+                  Estoque: <strong className="text-foreground">{p.estoque ?? "—"}</strong>
                   {" · "}
-                  <span>Pedidos: <strong className="text-foreground">{p.pedidos}</strong></span>
+                  Unidades vendidas: <strong className="text-foreground">{p.unidades}</strong>
                 </p>
                 <p>
-                  Experiência de compra: <span className="text-green-500 font-semibold">100</span>
-                  <span className="text-muted-foreground"> · </span>
-                  <span className="text-green-500 font-semibold">Boa</span>
+                  Gasto com Ads (dia): <strong className="text-pink-500">{fmt(p.adsGasto)}</strong>
                 </p>
               </div>
             </div>

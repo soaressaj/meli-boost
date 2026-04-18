@@ -26,19 +26,32 @@ function fmt(v: number) {
 }
 
 function buildCostMap(pricings: ListingPricing[]) {
-  const map: Record<string, ListingPricing> = {};
+  const byId: Record<string, ListingPricing> = {};
+  const byTitle: Record<string, ListingPricing> = {};
   for (const lp of pricings) {
-    if (lp.ml_item_id) map[lp.ml_item_id] = lp;
-    if (lp.title) map[lp.title.toLowerCase()] = lp;
+    if (lp.ml_item_id) byId[lp.ml_item_id] = lp;
+    if (lp.title) byTitle[lp.title.toLowerCase()] = lp;
   }
-  return map;
+  return { byId, byTitle };
 }
 
-function findPricingForPayment(payment: MPPayment, costMap: Record<string, ListingPricing>): ListingPricing | undefined {
+function findPricingForPayment(
+  payment: MPPayment,
+  costMap: { byId: Record<string, ListingPricing>; byTitle: Record<string, ListingPricing> }
+): ListingPricing | undefined {
+  // 1) Match preferencial por ml_item_id
+  const itemId = payment.additional_info?.items?.[0]?.id;
+  if (itemId && costMap.byId[itemId]) return costMap.byId[itemId];
+
+  // 2) Match por título dos items do pedido
+  const itemTitle = payment.additional_info?.items?.[0]?.title?.toLowerCase();
+  if (itemTitle && costMap.byTitle[itemTitle]) return costMap.byTitle[itemTitle];
+
+  // 3) Fallback: busca por description (substring)
   const desc = payment.description?.toLowerCase();
   if (desc) {
-    for (const key of Object.keys(costMap)) {
-      if (desc.includes(key) || key.includes(desc)) return costMap[key];
+    for (const key of Object.keys(costMap.byTitle)) {
+      if (desc.includes(key) || key.includes(desc)) return costMap.byTitle[key];
     }
   }
   return undefined;

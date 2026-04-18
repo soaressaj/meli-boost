@@ -31,7 +31,7 @@ export default function Login() {
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Zap className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">MetriFlow</h1>
+            <h1 className="text-2xl font-bold text-foreground">Vendedor Super</h1>
           </div>
           <p className="text-muted-foreground">Entre na sua conta</p>
         </div>

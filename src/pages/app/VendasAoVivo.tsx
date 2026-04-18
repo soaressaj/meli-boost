@@ -82,6 +82,7 @@ export default function VendasAoVivo() {
             payments={monthPayments}
             listingPricings={listingPricings}
             activeItems={activeItems}
+            adsReport={adsReport}
           />
           <div className="flex-1 min-h-[280px]">
             <AnnualRevenueChart payments={annualPayments} />
